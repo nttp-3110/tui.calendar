@@ -72,7 +72,7 @@ function getHoursLabels(opt, hasHourMarker, timezoneOffset, styles) {
         var color;
         var fontWeight;
         var isPast = (hasHourMarker && index <= nowHoursIndex) ||
-                     (renderEndDate < now && !datetime.isSameDate(renderEndDate, now));
+            (renderEndDate < now && !datetime.isSameDate(renderEndDate, now));
         if (isPast) {
             // past
             color = styles.pastTimeColor;
@@ -152,6 +152,39 @@ function TimeGrid(name, options, panelElement) {
             onlyShowInRange: false
         }
     }, options.week);
+
+    if (options.timeUnderground) {
+        var timeUnderground = {};
+        util.forEach(options.timeUnderground, function(item, index) {
+            var dateItem,
+                startDateItem = new TZDate(item.startDate),
+                endDateItem = new TZDate(item.endDate),
+
+                formatStartDate = datetime.format(startDateItem, 'YYYYMMDD'),
+                formatEndDate = datetime.format(endDateItem, 'YYYYMMDD'),
+
+                ratioByHourStartDate = (startDateItem.getHours() - options.week.hourStart) + (startDateItem.getMinutes() / 60),
+                ratioByHourEndDate = (endDateItem.getHours() - options.week.hourStart) + (endDateItem.getMinutes() / 60);
+
+            if (formatStartDate == formatEndDate) { // the same day
+                dateItem = {
+                    id: item.id,
+                    startDate: startDateItem,
+                    endDate: new TZDate(item.endDate),
+                    background: item.background || 'white',
+                    top: ratioByHourStartDate,
+                    height: ratioByHourEndDate - ratioByHourStartDate
+                };
+
+                if (timeUnderground[formatStartDate]) {
+                    timeUnderground[formatStartDate].push(dateItem);
+                } else {
+                    timeUnderground[formatStartDate] = [dateItem];
+                }
+            }
+        });
+        this.options.timeUnderground = timeUnderground;
+    }
 
     if (options.disabledGrid) {
         this.options.disabledGrid = {
@@ -233,7 +266,7 @@ TimeGrid.prototype._beforeDestroy = function() {
     domevent.off(this.stickyContainer, 'click', this._onClickStickyContainer, this);
 
     this._autoScroll = this.hourmarkers = this.intervalID =
-    this.timerID = this._cacheParentViewModel = this.stickyContainer = null;
+        this.timerID = this._cacheParentViewModel = this.stickyContainer = null;
 };
 
 /**
@@ -458,6 +491,51 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
     });
 };
 
+
+/**
+ * Reconcilation child views and render.
+ * @param {object} viewModels Viewmodel
+ * @param {object} grids grid information(width, left, day)
+ * @param {HTMLElement} container Container element for each time view.
+ * @param {Theme} theme - theme instance
+ */
+TimeGrid.prototype._renderChildrenUnderground = function(viewModels, grids, container, theme) {
+    var self = this,
+        options = this.options,
+        childOption,
+        child,
+        containerHeight,
+        i = 0;
+
+    // clear contents
+    container.innerHTML = '';
+    this.children.clear();
+    containerHeight = domutil.getSize(container.parentElement)[1];
+
+    // reconcilation of child views
+    util.forEach(viewModels, function(schedules, ymd) {
+        childOption = {
+            index: i,
+            left: grids[i] ? grids[i].left : 0,
+            width: grids[i] ? grids[i].width : 0,
+            ymd: ymd,
+            hourStart: options.hourStart,
+            hourEnd: options.hourEnd,
+        };
+
+        child = new Time(
+            childOption,
+            domutil.appendHTMLElement('div', container, config.classname('time-date time-underground')),
+            theme
+        );
+        child.renderUnderground(ymd, options.timeUnderground[ymd] || [], containerHeight);
+
+        self.addChild(child);
+
+        i += 1;
+    });
+};
+
 /**
  * @override
  * @param {object} viewModel ViewModel list from Week view.
@@ -487,6 +565,16 @@ TimeGrid.prototype.render = function(viewModel) {
      * Render sticky container for timezone display label
      **********/
     this.renderStickyContainer(baseViewModel);
+
+    /**********
+     * Render children underground
+     **********/
+    this._renderChildrenUnderground(
+        timeViewModel,
+        grids,
+        domutil.find(config.classname('.timegrid-underground'), container),
+        viewModel.theme
+    );
 
     /**********
      * Render children
@@ -668,7 +756,7 @@ TimeGrid.prototype._getStyles = function(theme, timezonesCollapsed) {
         styles.leftFontSize = theme.week.timegridLeft.fontSize;
         styles.timezoneWidth = theme.week.timegridLeft.width;
         styles.additionalTimezoneBackgroundColor = theme.week.timegridLeftAdditionalTimezone.backgroundColor
-                                                || styles.leftBackgroundColor;
+            || styles.leftBackgroundColor;
 
         styles.displayTimezoneLabelHeight = theme.week.timegridLeftTimezoneLabel.height;
         styles.displayTimezoneLabelBackgroundColor = theme.week.timegridLeft.backgroundColor === 'inherit' ? 'white' : theme.week.timegridLeft.backgroundColor;
