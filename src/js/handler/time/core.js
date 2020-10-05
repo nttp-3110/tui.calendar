@@ -22,38 +22,22 @@ var timeCore = {
      * @param {number} y - Y coordinate to calculate hour ratio.
      * @returns {number} hour index ratio value.
      */
-    _calcGridYIndex: function(baseMil, height, y) {
+    _calcGridYIndex: function(baseMil, height, y, options) {
         // get ratio from right expression > point.y : x = session.height : baseMil
         // and convert milliseconds value to hours.
-        var range = [
-            0,
-            0.05,
-            0.1,
-            0.15,
-            0.2,
-            0.25,
-            0.3,
-            0.35,
-            0.4,
-            0.45,
-            0.5,
-            0.55,
-            0.6,
-            0.65,
-            0.7,
-            0.75,
-            0.8,
-            0.85,
-            0.9,
-            0.95,
-            1
-        ];
+        // console.log(options, ' ===> options ');
         var result = datetime.millisecondsTo('hour', (y * baseMil) / height),
             floored = result | 0,
-            nearest = common.nearest(result - floored, range);
-
-        // return floored + (nearest ? 0.5 : 0);
-        return floored + nearest;
+            // nearest = common.nearest(result - floored, options.ratioGridY);
+            nearest;
+            for (var i = 0; i < options.ratioGridY.length; i++) {
+                var element = options.ratioGridY[i];
+                if((result - floored) <= element) {
+                    nearest = options.ratioGridY[i - 1] || 0;
+                    break;
+                }
+            }
+        return floored + (nearest || 0);
     },
 
     /**
@@ -79,7 +63,7 @@ var timeCore = {
             var mouseY = Point.n(domevent.getMousePosition(mouseEvent.originEvent || mouseEvent, container)).y,
                 gridY = common.ratio(viewHeight, hourLength, mouseY),
                 timeY = new TZDate(viewTime).addMinutes(datetime.minutesFromHours(gridY)),
-                nearestGridY = self._calcGridYIndex(baseMil, viewHeight, mouseY),
+                nearestGridY = self._calcGridYIndex(baseMil, viewHeight, mouseY, options),
                 nearestGridTimeY = new TZDate(viewTime).addMinutes(
                     datetime.minutesFromHours(nearestGridY + options.hourStart)
                 );

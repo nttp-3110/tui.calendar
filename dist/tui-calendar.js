@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Mon Sep 28 2020
+ * @version 1.12.11 | Mon Oct 05 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -15637,38 +15637,22 @@ var timeCore = {
      * @param {number} y - Y coordinate to calculate hour ratio.
      * @returns {number} hour index ratio value.
      */
-    _calcGridYIndex: function(baseMil, height, y) {
+    _calcGridYIndex: function(baseMil, height, y, options) {
         // get ratio from right expression > point.y : x = session.height : baseMil
         // and convert milliseconds value to hours.
-        var range = [
-            0,
-            0.05,
-            0.1,
-            0.15,
-            0.2,
-            0.25,
-            0.3,
-            0.35,
-            0.4,
-            0.45,
-            0.5,
-            0.55,
-            0.6,
-            0.65,
-            0.7,
-            0.75,
-            0.8,
-            0.85,
-            0.9,
-            0.95,
-            1
-        ];
+        // console.log(options, ' ===> options ');
         var result = datetime.millisecondsTo('hour', (y * baseMil) / height),
             floored = result | 0,
-            nearest = common.nearest(result - floored, range);
-
-        // return floored + (nearest ? 0.5 : 0);
-        return floored + nearest;
+            // nearest = common.nearest(result - floored, options.ratioGridY);
+            nearest;
+            for (var i = 0; i < options.ratioGridY.length; i++) {
+                var element = options.ratioGridY[i];
+                if((result - floored) <= element) {
+                    nearest = options.ratioGridY[i - 1] || 0;
+                    break;
+                }
+            }
+        return floored + (nearest || 0);
     },
 
     /**
@@ -15694,7 +15678,7 @@ var timeCore = {
             var mouseY = Point.n(domevent.getMousePosition(mouseEvent.originEvent || mouseEvent, container)).y,
                 gridY = common.ratio(viewHeight, hourLength, mouseY),
                 timeY = new TZDate(viewTime).addMinutes(datetime.minutesFromHours(gridY)),
-                nearestGridY = self._calcGridYIndex(baseMil, viewHeight, mouseY),
+                nearestGridY = self._calcGridYIndex(baseMil, viewHeight, mouseY, options),
                 nearestGridTimeY = new TZDate(viewTime).addMinutes(
                     datetime.minutesFromHours(nearestGridY + options.hourStart)
                 );
@@ -17619,7 +17603,7 @@ var TimeResizeGuide = __webpack_require__(/*! ./resizeGuide */ "./src/js/handler
  * @param {TimeGrid} [timeGridView] - TimeGrid view instance.
  * @param {Base} [baseController] - Base controller instance.
  */
-function TimeResize(dragHandler, timeGridView, baseController) {
+function TimeResize(dragHandler, timeGridView, baseController, options) {
     /**
      * @type {Drag}
      */
@@ -17987,8 +17971,8 @@ function TimeResizeGuide(timeResize) {
     timeResize.on({
         'timeResizeDragstart': this._onDragStart,
         'timeResizeDrag': this._onDrag,
-        'timeResizeDragend': this._clearGuideElement,
-        'timeResizeClick': this._clearGuideElement
+        // 'timeResizeDragend': this._clearGuideElement,
+        // 'timeResizeClick': this._clearGuideElement
     }, this);
 }
 
@@ -18045,8 +18029,8 @@ TimeResizeGuide.prototype._refreshGuideElement = function(guideHeight, minTimeHe
         guideElement.style.display = 'block';
 
         if (timeElement) {
-            timeElement.style.height = timeHeight + 'px';
-            timeElement.style.minHeight = minTimeHeight + 'px';
+            timeElement.style.height = guideHeight + 'px';
+            timeElement.style.minHeight = guideHeight + 'px';
         }
     });
 };
@@ -18109,8 +18093,8 @@ TimeResizeGuide.prototype._onDrag = function(dragEventData) {
         height;
 
     height = (this._startHeightPixel + gridYOffsetPixel);
-    // at least large than 30min from schedule start time.
-    minHeight = guideTop + ratio(hourLength, viewHeight, 0.5);
+    // at least large than 15min from schedule start time.
+    minHeight = guideTop + ratio(hourLength, viewHeight, viewOptions.ratioGridY[1]);
     minHeight -= this._startTopPixel;
     timeMinHeight = minHeight;
     minHeight += ratio(minutesLength, viewHeight, goingDuration) + ratio(minutesLength, viewHeight, comingDuration);
@@ -25787,7 +25771,8 @@ function TimeGrid(name, options, panelElement) {
             todayMarker: true,
             positionHourMarker: 'all',
             onlyShowInRange: false
-        }
+        },
+        ratioGridY: [0, 0.25, 0.5, 0.75, 1]
     }, options.week);
 
     if (options.disabledGrid) {
@@ -26079,7 +26064,8 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
                 isDisabled: isDisableGrid,
                 hourDisabled: Number(ratioByHourDisabled.toFixed(2)),
                 elementDisabled: elementDisabled
-            }
+            },
+            ratioGridY: options.ratioGridY
         };
         // console.log(childOption);
         child = new Time(

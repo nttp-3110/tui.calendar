@@ -22,7 +22,7 @@ var TimeResizeGuide = require('./resizeGuide');
  * @param {TimeGrid} [timeGridView] - TimeGrid view instance.
  * @param {Base} [baseController] - Base controller instance.
  */
-function TimeResize(dragHandler, timeGridView, baseController) {
+function TimeResize(dragHandler, timeGridView, baseController, options) {
     /**
      * @type {Drag}
      */
