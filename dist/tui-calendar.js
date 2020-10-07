@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Mon Oct 05 2020
+ * @version 1.12.11 | Wed Oct 07 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -11340,8 +11340,6 @@ var dayGridCore = __webpack_require__(/*! ./core */ "./src/js/handler/daygrid/co
 var DayGridCreationGuide = __webpack_require__(/*! ./creationGuide */ "./src/js/handler/daygrid/creationGuide.js");
 var TZDate = __webpack_require__(/*! ../../common/timezone */ "./src/js/common/timezone.js").Date;
 
-var CLICK_DELAY = 300;
-
 /**
  * @constructor
  * @implements {Handler}
@@ -11401,12 +11399,14 @@ function DayGridCreation(dragHandler, view, controller, options) {
      */
     this._disableHover = options._disableHover;
 
+    this.CLICK_DELAY = options.timeDelay && options.timeDelay.click || 300;
+
     dragHandler.on('dragStart', this._onDragStart, this);
     dragHandler.on('click', this._onClick, this);
     domevent.on(view.container, 'mouseover', this._onMouseOver, this);
 
     if (this._disableDblClick) {
-        CLICK_DELAY = 0;
+        this.CLICK_DELAY = 0;
     } else {
         domevent.on(view.container, 'dblclick', this._onDblClick, this);
     }
@@ -11624,7 +11624,7 @@ DayGridCreation.prototype._onClick = function(clickEventData) {
             self._createSchedule(scheduleData);
         }
         self._requestOnClick = false;
-    }, CLICK_DELAY);
+    }, this.CLICK_DELAY);
 };
 
 /**
@@ -11635,7 +11635,6 @@ DayGridCreation.prototype._onClick = function(clickEventData) {
 DayGridCreation.prototype._onMouseOver = function(hoverEventData) {
     var self = this;
     var getScheduleDataFunc, scheduleData;
-    console.log('hree');
     if (!this.checkExpectedCondition(hoverEventData.target) || this._disableHover) {
         return;
     }
@@ -11646,12 +11645,11 @@ DayGridCreation.prototype._onMouseOver = function(hoverEventData) {
     this._requestOnHover = true;
     setTimeout(function() {
         if (self._requestOnHover) {
-            console.log('hrere');
             self.fire('mouseenter', scheduleData);
             self._createSchedule(scheduleData);
         }
         self._requestOnHover = false;
-    }, CLICK_DELAY);
+    }, this.CLICK_DELAY);
 };
 
 /**
@@ -13408,8 +13406,6 @@ var getMousePosDate = __webpack_require__(/*! ./core */ "./src/js/handler/month/
 var Guide = __webpack_require__(/*! ./creationGuide */ "./src/js/handler/month/creationGuide.js");
 var TZDate = __webpack_require__(/*! ../../common/timezone */ "./src/js/common/timezone.js").Date;
 
-var CLICK_DELAY = 300;
-
 /**
  * @constructor
  * @param {Drag} dragHandler - Drag handler instance.
@@ -13464,11 +13460,13 @@ function MonthCreation(dragHandler, monthView, baseController, options) {
      */
     this._disableClick = options.disableClick;
 
+    this.CLICK_DELAY = options.timeDelay && options.timeDelay.click || 300;
+
     dragHandler.on('dragStart', this._onDragStart, this);
     dragHandler.on('click', this._onClick, this);
 
     if (this._disableDblClick) {
-        CLICK_DELAY = 0;
+        this.CLICK_DELAY = 0;
     } else {
         domevent.on(monthView.container, 'dblclick', this._onDblClick, this);
     }
@@ -13682,7 +13680,7 @@ MonthCreation.prototype._onClick = function(e) {
             });
         }
         self._requestOnClick = false;
-    }, CLICK_DELAY);
+    }, this.CLICK_DELAY);
 };
 
 /**
@@ -15801,8 +15799,6 @@ var TimeCreationGuide = __webpack_require__(/*! ./creationGuide */ "./src/js/han
 var TZDate = __webpack_require__(/*! ../../common/timezone */ "./src/js/common/timezone.js").Date;
 var timeCore = __webpack_require__(/*! ./core */ "./src/js/handler/time/core.js");
 
-var CLICK_DELAY = 300;
-var HOVER_DELAY = 50;
 /**
  * @constructor
  * @implements {Handler}
@@ -15884,20 +15880,39 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
      */
     this._disableClick = options.disableClick;
 
+    this.HOVER_DELAY = (options.timeDelay && options.timeDelay.hover) || 2000;
+
+    this.CLICK_DELAY = (options.timeDelay && options.timeDelay.click) || 300;
+
+    var debounce = function(func, delay) {
+        var inDebounce
+        return function() {
+            var context = this
+            var args = arguments
+            clearTimeout(inDebounce)
+            inDebounce = setTimeout(function() {
+                return func.apply(context, args);
+            }, delay);
+        }
+    }
+
     dragHandler.on('dragStart', this._onDragStart, this);
     dragHandler.on('click', this._onClick, this);
 
     if (this._showCreationGuideOnClick) {
         domevent.on(timeGridView.container, 'click', this._onClick, this);
     }
-    
+
     if (this._showCreationGuideOnHover) {
-        domevent.on(timeGridView.container, 'mousemove', this._onMouseMove, this);
+        var onHoverDelay = debounce(function(evt) {
+            this._onMouseMove(evt);
+        }, this.HOVER_DELAY);
+        domevent.on(timeGridView.container, 'mousemove', onHoverDelay, this);
         domevent.on(timeGridView.container, 'mouseleave', this._onMouseLeave, this);
     }
 
     if (this._disableDblClick) {
-        CLICK_DELAY = 0;
+        this.CLICK_DELAY = 0;
     } else {
         domevent.on(timeGridView.container, 'dblclick', this._onDblClick, this);
     }
@@ -16147,13 +16162,11 @@ TimeCreation.prototype._onMouseMove = function(clickEventData) {
     eventData.delta = customCondResult.delta;
     eventData.template = this._creationGuideTemplate;
     this._requestOnHover = true;
-    setTimeout(function() {
-        if (self._requestOnHover) {
-            self.fire('timeCreationHover', eventData);
-            // self._createSchedule(eventData);
-        }
-        self._requestOnHover = false;
-    }, HOVER_DELAY);
+    if (self._requestOnHover) {
+        self.fire('timeCreationHover', eventData);
+        // self._createSchedule(eventData);
+    }
+    self._requestOnHover = false;
     this._dragStart = this._getScheduleDataFunc = null;
 };
 
@@ -16211,7 +16224,7 @@ TimeCreation.prototype._onClick = function(clickEventData) {
             self.guide._clickGuideElement(self.guide.guideElement.getBoundingClientRect());
         }
         self._requestOnClick = false;
-    }, CLICK_DELAY);
+    }, this.CLICK_DELAY);
     this._dragStart = this._getScheduleDataFunc = null;
 };
 

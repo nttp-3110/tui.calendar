@@ -14,8 +14,6 @@ var dayGridCore = require('./core');
 var DayGridCreationGuide = require('./creationGuide');
 var TZDate = require('../../common/timezone').Date;
 
-var CLICK_DELAY = 300;
-
 /**
  * @constructor
  * @implements {Handler}
@@ -75,12 +73,14 @@ function DayGridCreation(dragHandler, view, controller, options) {
      */
     this._disableHover = options._disableHover;
 
+    this.CLICK_DELAY = options.timeDelay && options.timeDelay.click || 300;
+
     dragHandler.on('dragStart', this._onDragStart, this);
     dragHandler.on('click', this._onClick, this);
     domevent.on(view.container, 'mouseover', this._onMouseOver, this);
 
     if (this._disableDblClick) {
-        CLICK_DELAY = 0;
+        this.CLICK_DELAY = 0;
     } else {
         domevent.on(view.container, 'dblclick', this._onDblClick, this);
     }
@@ -298,7 +298,7 @@ DayGridCreation.prototype._onClick = function(clickEventData) {
             self._createSchedule(scheduleData);
         }
         self._requestOnClick = false;
-    }, CLICK_DELAY);
+    }, this.CLICK_DELAY);
 };
 
 /**
@@ -309,7 +309,6 @@ DayGridCreation.prototype._onClick = function(clickEventData) {
 DayGridCreation.prototype._onMouseOver = function(hoverEventData) {
     var self = this;
     var getScheduleDataFunc, scheduleData;
-    console.log('hree');
     if (!this.checkExpectedCondition(hoverEventData.target) || this._disableHover) {
         return;
     }
@@ -320,12 +319,11 @@ DayGridCreation.prototype._onMouseOver = function(hoverEventData) {
     this._requestOnHover = true;
     setTimeout(function() {
         if (self._requestOnHover) {
-            console.log('hrere');
             self.fire('mouseenter', scheduleData);
             self._createSchedule(scheduleData);
         }
         self._requestOnHover = false;
-    }, CLICK_DELAY);
+    }, this.CLICK_DELAY);
 };
 
 /**
