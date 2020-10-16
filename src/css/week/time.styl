@@ -161,6 +161,8 @@
         overflow: hidden
         font-size: 12px
         font-weight: bold
+        top: 2px
+        height: calc(100% - 2px)
 
     .schedule-content
         overflow: hidden
@@ -170,16 +172,29 @@
         font-weight: normal;
         font-size: 11px;
 
-    .resize-handle
+    .top-resize-handle
+        margin-left: 0
         position: absolute
-        right: 0px
+        right: 1px
+        top: 0px
+        left: 4px
+        height: 3px
+        text-align: center
+        color: #fff
+        cursor: row-resize
+        z-index: 97
+
+    .bottom-resize-handle
+        position: absolute
+        right: 1px
         bottom: 0px
-        left: 0px
-        height: 5px
+        left: 4px
+        height: 3px
         text-align: center
         color: #fff
         cursor: row-resize
         background-position: center top
+        z-index: 97
 
     // Guide element
     .guide-creation

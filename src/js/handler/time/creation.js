@@ -84,7 +84,12 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
     /**
      * @type {function}
      */
-    this._customCheckExpectedCondition = options.customCheckExpectedCondition;
+    this._checkExpectedConditionHover = options.checkExpectedConditionHover;
+
+    /**
+     * @type {function}
+     */
+    this._checkExpectedConditionClick = options.checkExpectedConditionClick;
 
     /**
      * @type {function}
@@ -366,10 +371,10 @@ TimeCreation.prototype._onMouseMove = function(clickEventData) {
         return;
     }
 
-    getScheduleDataFunc = this._retriveScheduleData(condResult);
+    getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
     eventData = getScheduleDataFunc(clickEventData);
-    if (this._customCheckExpectedCondition) {
-        customCondResult = this._customCheckExpectedCondition(eventData);
+    if (this._checkExpectedConditionHover) {
+        customCondResult = this._checkExpectedConditionHover(eventData);
         if (!customCondResult) {
             return;
         }
@@ -420,10 +425,10 @@ TimeCreation.prototype._onClick = function(clickEventData) {
         return;
     }
 
-    getScheduleDataFunc = this._retriveScheduleData(condResult);
+    getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
     eventData = getScheduleDataFunc(clickEventData);
-    if (this._customCheckExpectedCondition) {
-        customCondResult = this._customCheckExpectedCondition(eventData);
+    if (this._checkExpectedConditionClick) {
+        customCondResult = this._checkExpectedConditionClick(eventData);
         if (!customCondResult) {
             return;
         }

@@ -12,7 +12,8 @@ describe('TimeResize', function() {
         var parent = document.createElement('div');
         expect(TimeResize.prototype.checkExpectCondition(target)).toBe(false);
 
-        domutil.addClass(target, '/* @echo CSS_PREFIX */time-resize-handle');
+        domutil.addClass(target, '/* @echo CSS_PREFIX */time-top-resize-handle');
+        domutil.addClass(target, '/* @echo CSS_PREFIX */time-bottom-resize-handle');
         expect(TimeResize.prototype.checkExpectCondition(target)).toBe(false);
 
         domutil.addClass(parent, '/* @echo CSS_PREFIX */time-date');
