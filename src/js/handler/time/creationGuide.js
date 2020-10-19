@@ -64,10 +64,19 @@ function TimeCreationGuide(timeCreation) {
         timeCreationHover: this._createGuideElement,
         clearCreationGuide: this._clearGuideElement
     }, this);
+
     domevent.on(this.guideElement, 'click', this._clickGuideElement, this);
+    domevent.on(this.guideElement, 'mousemove', this._onMouseMoveGuideElement, this);
 
     this.applyTheme(timeCreation.baseController.theme);
 }
+
+/**
+ * Destroy method.
+ */
+TimeCreationGuide.prototype._onMouseMoveGuideElement = function(moveGuideElementEventData) {
+    this.clearGuideElement();
+};
 
 /**
  * Destroy method.
@@ -121,9 +130,10 @@ TimeCreationGuide.prototype._clearGuideElement = function() {
  * @param {TZDate} end - end time of schedule to create
  * @param {boolean} bottomLabel - is label need to render bottom of guide element?
  */
-TimeCreationGuide.prototype._refreshGuideElement = function(top, height, start, end, bottomLabel) {
-    var guideElement = this.guideElement;
-    var timeElement = this.guideTimeElement;
+TimeCreationGuide.prototype._refreshGuideElement = function(top, height, start, end, bottomLabel, scheduleData) {
+    var guideElement = this.guideElement,
+        timeElement = this.guideTimeElement;
+        
     guideElement.style.top = top + 'px';
     guideElement.style.height = height + 'px';
     guideElement.style.display = 'block';
@@ -179,7 +189,7 @@ TimeCreationGuide.prototype._getUnitData = function(relatedView) {
  * @param {TZDate} end - relative time value of dragend point
  * @returns {array} limited style data
  */
-TimeCreationGuide.prototype._limitStyleData = function(top, height, start, end) {
+TimeCreationGuide.prototype._limitStyleData = function(top, height, start, end, bottomLabel, scheduleData) {
     var unitData = this._styleUnit;
 
     top = common.limit(top, [0], [unitData[0]]);
@@ -187,7 +197,7 @@ TimeCreationGuide.prototype._limitStyleData = function(top, height, start, end) 
     start = common.limitDate(start, unitData[2], unitData[3]);
     end = common.limitDate(end, unitData[2], unitData[3]);
 
-    return [top, height, start, end];
+    return [top, height, start, end, bottomLabel, scheduleData];
 };
 
 /**
@@ -279,7 +289,9 @@ TimeCreationGuide.prototype._createGuideElement = function(dragStartEventData) {
         top,
         height,
         start,
-        end
+        end,
+        null,
+        dragStartEventData
     );
     this._refreshGuideElement.apply(this, result);
 

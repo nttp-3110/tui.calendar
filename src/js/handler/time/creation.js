@@ -100,18 +100,6 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
 
     this.CLICK_DELAY = (options.timeDelay && options.timeDelay.click) || 300;
 
-    var debounce = function(func, delay) {
-        var inDebounce
-        return function() {
-            var context = this
-            var args = arguments
-            clearTimeout(inDebounce)
-            inDebounce = setTimeout(function() {
-                return func.apply(context, args);
-            }, delay);
-        }
-    }
-
     dragHandler.on('dragStart', this._onDragStart, this);
     dragHandler.on('click', this._onClick, this);
 
@@ -120,8 +108,9 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
     }
 
     if (this._showCreationGuideOnHover) {
-        var onHoverDelay = debounce(function(evt) {
-            this._onMouseMove(evt);
+        var self = this;
+        var onHoverDelay = util.debounce(function(evt) {
+            self._onMouseMove(evt);
         }, this.HOVER_DELAY);
         domevent.on(timeGridView.container, 'mousemove', onHoverDelay, this);
         domevent.on(timeGridView.container, 'mouseleave', this._onMouseLeave, this);
@@ -352,8 +341,12 @@ TimeCreation.prototype._onDragEnd = function(dragEndEventData) {
  * @param {object} clickEventData - event data from Drag#click.
  */
 TimeCreation.prototype._onMouseMove = function(clickEventData) {
-    var self = this;
-    var condResult, getScheduleDataFunc, eventData, customCondResult;
+    var self = this,
+        condResult,
+        getScheduleDataFunc,
+        eventData,
+        customCondResult;
+
     this.dragHandler.off({
         drag: this._onDrag,
         dragEnd: this._onDragEnd
