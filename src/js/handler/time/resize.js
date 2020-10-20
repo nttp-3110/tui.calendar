@@ -12,6 +12,7 @@ var TZDate = require('../../common/timezone').Date;
 var common = require('../../common/common');
 var timeCore = require('./core');
 var TimeResizeGuide = require('./resizeGuide');
+var TimeCreation = require('./creation');
 
 /**
  * @constructor
@@ -53,13 +54,15 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
 
     this._dragStartDirection = null;
 
-    this._dragPrevent = false; 
-
     this._currentGridY = null;
 
     this._hourStartInDate = null;
 
     this._hourEndInDate = null;
+
+    this._timeCreation = null;
+
+    this._onMouseMoveCreation = null;
 
     /**
      * @type {TimeResizeGuide}
@@ -69,6 +72,22 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
     this._checkExpectedConditionResize = options.checkExpectedConditionResize;
 
     dragHandler.on('dragStart', this._onDragStart, this);
+
+    // get time creation
+    if (dragHandler.contexts && dragHandler.contexts.length > 0) {
+        for (var i = 0; i < dragHandler.contexts.length; i++) {
+            var context = dragHandler.contexts[i];
+            if(context && context.length > 0)   {
+                for (var k = 0; k < context.length; k++) {
+                    var element = context[k];
+                    if (element instanceof TimeCreation) {
+                        this._timeCreation = element;
+                    }
+                }
+            }
+            
+        }
+    }
 }
 
 /**
@@ -132,6 +151,12 @@ TimeResize.prototype._onDragStart = function(dragStartEventData) {
         getScheduleDataFunc,
         schedule,
         scheduleData;
+
+    if (this._timeCreation) {
+        this._onMouseMoveCreation = Object.assign(this._timeCreation._onMouseMove);
+        this._timeCreation.guide._clearGuideElement();
+        this._timeCreation._onMouseMove = null;
+    }
 
     if (!timeView || !blockElement) {
         return;
@@ -219,6 +244,8 @@ TimeResize.prototype._onDrag = function(dragEventData, overrideEventName, revise
             } else if (scheduleData.nearestGridTimeY.getTime() <= this._hourStartInDate.getTime()) {
                 scheduleData.nearestGridY = 0;
                 this._dragStop == null && (this._dragStop = scheduleData.nearestGridY);
+            } else {
+                this._dragStop = null;
             }
         } else if (this._dragStartDirection == 'bottom') {
             if (scheduleData.nearestGridY <= gridStartY + opt.ratioHourGridY[1]) {
@@ -227,6 +254,8 @@ TimeResize.prototype._onDrag = function(dragEventData, overrideEventName, revise
             } else if (scheduleData.nearestGridTimeY.getTime() >= this._hourEndInDate.getTime()) {
                 scheduleData.nearestGridY = this._hourEndInDate.getHours() - opt.hourStart + this._getNearestHour(this._hourEndInDate.getMinutes(), opt.minuteCell, opt.ratioHourGridY);
                 this._dragStop == null && (this._dragStop = scheduleData.nearestGridY);
+            } else {
+                this._dragStop = null;
             }
         } 
         
@@ -269,6 +298,10 @@ TimeResize.prototype._onDragEnd = function(dragEndEventData) {
         dragStart = this._dragStart,
         schedule,
         scheduleData;
+
+    if (this._timeCreation) {
+        this._timeCreation._onMouseMove = this._onMouseMoveCreation;
+    }
 
     this.dragHandler.off({
         drag: this._onDrag,

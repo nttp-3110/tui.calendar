@@ -213,7 +213,9 @@ TimeResizeGuide.prototype._onDrag = function(dragEventData) {
  * @param {object} dragEventData - event data from Drag#drag.
  */
 TimeResizeGuide.prototype._onDragEnd = function(dragEventData) {
-
+    if (!util.browser.msie) {
+        domutil.removeClass(global.document.body, config.classname('resizing'));
+    }
 };
 
 module.exports = TimeResizeGuide;

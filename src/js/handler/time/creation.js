@@ -357,8 +357,12 @@ TimeCreation.prototype._onDragEnd = function(dragEndEventData) {
  * @param {object} clickEventData - event data from Drag#click.
  */
 TimeCreation.prototype._onMouseMove = function(clickEventData) {
-    var self = this;
-    var condResult, getScheduleDataFunc, eventData, customCondResult;
+    var self = this,
+        condResult,
+        getScheduleDataFunc,
+        eventData,
+        customCondResult;
+
     this.dragHandler.off({
         drag: this._onDrag,
         dragEnd: this._onDragEnd
