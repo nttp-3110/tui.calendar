@@ -327,13 +327,26 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
     var backgroundColor = styles.displayTimezoneLabelBackgroundColor;
 
     util.forEach(timezones, function(timezone, index) {
-        var hourmarker = new TZDate(now);
-        var timezoneDifference;
-        var timeSlots;
-        var dateDifference;
-
+        var hourmarker = new TZDate(now),
+            timezoneDifference,
+            timeSlots,
+            dateDifference,
+            lastTimeSlot,
+            shiftByOffset = parseInt(timezone.timezoneOffset / SIXTY_MINUTES, 10),
+            nowHours = common.shiftHours(now.getHours(), shiftByOffset) % 24;
+            
         timezoneDifference = timezone.timezoneOffset + primaryOffset;
         timeSlots = getHoursLabels(opt, currentHours >= 0, timezoneDifference, styles);
+        lastTimeSlot = timeSlots[timeSlots.length - 1];
+        
+        timeSlots.push({
+            hour: lastTimeSlot.hour + 1,
+            minutes: lastTimeSlot.minutes,
+            color: lastTimeSlot.color,
+            fontWeight: lastTimeSlot.fontWeight,
+            hidden: lastTimeSlot.hour + 1 == nowHours,
+            isEndTime: true
+        })
 
         hourmarker.setMinutes(hourmarker.getMinutes() + timezoneDifference);
         dateDifference = hourmarker.getDate() - now.getDate();
@@ -444,7 +457,6 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
                 elementDisabled: elementDisabled
             }
         };
-        // console.log(childOption);
         child = new Time(
             childOption,
             domutil.appendHTMLElement('div', container, config.classname('time-date')),

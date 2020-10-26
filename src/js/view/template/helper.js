@@ -367,7 +367,7 @@ var helpers = {
     },
 
     'timegridDisplayPrimaryTime-tmpl': function(time, isHaftTime) {
-        var hour = time.hour;
+        var hour = time.hour == 24 ? 0 : time.hour;
         var minute = isHaftTime === true ? '30' : '00';
         var meridiem = hour >= 12 ? 'pm' : 'am';
         if (hour > 12) {
