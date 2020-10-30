@@ -150,7 +150,8 @@ function TimeGrid(name, options, panelElement) {
             todayMarker: true,
             positionHourMarker: 'all',
             onlyShowInRange: false
-        }
+        },
+        ratioGridY: [0, 0.25, 0.5, 0.75, 1]
     }, options.week);
 
     if (options.disabledGrid) {
@@ -455,7 +456,8 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
                 isDisabled: isDisableGrid,
                 hourDisabled: Number(ratioByHourDisabled.toFixed(2)),
                 elementDisabled: elementDisabled
-            }
+            },
+            ratioGridY: options.ratioGridY
         };
         child = new Time(
             childOption,
