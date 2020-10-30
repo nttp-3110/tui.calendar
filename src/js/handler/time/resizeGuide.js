@@ -190,6 +190,7 @@ TimeResizeGuide.prototype._onDrag = function(dragEventData) {
         guideTop = Math.max(guideTop, minTop);
         guideTop = Math.min(guideTop, maxTop);
 
+        
         top = ratio(hourLength, viewHeight, guideTop);
         height = this._startHeightPixel + ratio(hourLength, viewHeight, this._startGridY - dragEventData.nearestGridY);
         this._refreshGuideElement(top, height);
@@ -201,7 +202,7 @@ TimeResizeGuide.prototype._onDrag = function(dragEventData) {
         maxHeight = viewHeight - guideTop;
 
         height = this._startHeightPixel + ratio(hourLength, viewHeight, dragEventData.nearestGridY - this._startGridY);
-
+// console.log(height, ' ===> ', minHeight, maxHeight);
         height = Math.max(height, minHeight);
         height = Math.min(height, maxHeight);
 

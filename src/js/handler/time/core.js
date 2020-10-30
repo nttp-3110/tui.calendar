@@ -23,16 +23,23 @@ var timeCore = {
     _getNearestHour: function(minutes, minMinute, ratioHourGridY) {
         if (ratioHourGridY[minutes / minMinute]) {
             return ratioHourGridY[minutes / minMinute];
-        } else if (minutes === 0) {
-            return 0;
-        } else if (minutes > 30) {
-            return 1;
-        } else if (minutes <= 30) {
-            return 0.5;
+        }
+        return Number((minutes / 60).toFixed(2));
+    },
+    _getNearestGridY: function(gridY, ratioHourGridY, direction) {
+        if (direction == 'top') {
+            for (var i = 0; i < ratioHourGridY.length; i++) {
+                var element = ratioHourGridY[i];
+                var previousElement = ratioHourGridY[i - 1];
+                if (gridY <= element) {
+                    return previousElement || 0;
+                }            
+            }
+        } else if (direction == 'bottom') {
+            return common.nearest(gridY, ratioHourGridY);
         }
         return 0;
-    },
-
+    }, 
     /**
      * Get Y index ratio(hour) in time grids by supplied parameters.
      * @param {number} baseMil - base milliseconds number for supplied height.

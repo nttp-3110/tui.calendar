@@ -108,18 +108,16 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
     dragHandler.on('dragStart', this._onDragStart, this);
     dragHandler.on('click', this._onClick, this);
 
-    if (this._showCreationGuideOnClick) {
-        domevent.on(timeGridView.container, 'click', this._onClick, this);
-    }
+    domevent.on(timeGridView.container, 'click', this._onClick, this);
 
-    if (this._showCreationGuideOnHover) {
-        var self = this;
-        var onHoverDelay = util.debounce(function(evt) {
-            self._onMouseMove(evt);
+    var self = this,
+        onHoverDelay = util.debounce(function(evt) {
+            if (util.isFunction(self._onMouseMove)) {
+                self._onMouseMove(evt);
+            }
         }, this.HOVER_DELAY);
-        domevent.on(timeGridView.container, 'mousemove', onHoverDelay, this);
-        domevent.on(timeGridView.container, 'mouseleave', this._onMouseLeave, this);
-    }
+    domevent.on(timeGridView.container, 'mousemove', onHoverDelay, this);
+    domevent.on(timeGridView.container, 'mouseleave', this._onMouseLeave, this);
 
     if (this._disableDblClick) {
         this.CLICK_DELAY = 0;
@@ -352,6 +350,7 @@ TimeCreation.prototype._onMouseMove = function(clickEventData) {
         eventData,
         customCondResult;
 
+        if (this._showCreationGuideOnHover) {
     this.dragHandler.off({
         drag: this._onDrag,
         dragEnd: this._onDragEnd
@@ -382,6 +381,7 @@ TimeCreation.prototype._onMouseMove = function(clickEventData) {
     }
     self._requestOnHover = false;
     this._dragStart = this._getScheduleDataFunc = null;
+}
 };
 
 /**
@@ -403,43 +403,45 @@ TimeCreation.prototype._onMouseLeave = function() { // hoveEvenData
  * @emits TimeCreation#timeCreationClick
  * @param {object} clickEventData - event data from Drag#click.
  */
-TimeCreation.prototype._onClick = function(clickEventData) {
+TimeCreation.prototype._onClick = function (clickEventData) {
     var self = this;
     var condResult, getScheduleDataFunc, eventData, customCondResult;
-    this.dragHandler.off({
-        drag: this._onDrag,
-        dragEnd: this._onDragEnd
-    }, this);
+    if (this._showCreationGuideOnClick) {
+        this.dragHandler.off({
+            drag: this._onDrag,
+            dragEnd: this._onDragEnd
+        }, this);
 
-    condResult = this.checkExpectedCondition(clickEventData.target);
-    if (!condResult || this._disableHover) {
-        // self.fire('clearCreationGuide', eventData);
+        condResult = this.checkExpectedCondition(clickEventData.target);
+        if (!condResult || this._disableHover) {
+            // self.fire('clearCreationGuide', eventData);
 
-        return;
-    }
-
-    getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
-    eventData = getScheduleDataFunc(clickEventData);
-    if (this._checkExpectedConditionClick) {
-        customCondResult = this._checkExpectedConditionClick(eventData);
-        if (!customCondResult) {
             return;
         }
-    }
-    eventData.endTime = customCondResult.endTime;
-    eventData.delta = customCondResult.delta;
-    eventData.template = this._creationGuideTemplate;
-    this._requestOnClick = true;
-    setTimeout(function() {
-        if (self._requestOnClick) {
-            self.fire('timeCreationClick', eventData);
-            self._createSchedule(eventData);
-            // trigger click guide element
-            self.guide._clickGuideElement(self.guide.guideElement.getBoundingClientRect());
+
+        getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
+        eventData = getScheduleDataFunc(clickEventData);
+        if (this._checkExpectedConditionClick) {
+            customCondResult = this._checkExpectedConditionClick(eventData);
+            if (!customCondResult) {
+                return;
+            }
         }
-        self._requestOnClick = false;
-    }, this.CLICK_DELAY);
-    this._dragStart = this._getScheduleDataFunc = null;
+        eventData.endTime = customCondResult.endTime;
+        eventData.delta = customCondResult.delta;
+        eventData.template = this._creationGuideTemplate;
+        this._requestOnClick = true;
+        setTimeout(function () {
+            if (self._requestOnClick) {
+                self.fire('timeCreationClick', eventData);
+                self._createSchedule(eventData);
+                // trigger click guide element
+                self.guide._clickGuideElement(self.guide.guideElement.getBoundingClientRect());
+            }
+            self._requestOnClick = false;
+        }, this.CLICK_DELAY);
+        this._dragStart = this._getScheduleDataFunc = null;
+    }
 };
 
 /**
@@ -469,6 +471,7 @@ TimeCreation.prototype._onDblClick = function(e) {
  * @param {Schedule} schedule - schedule instance
  */
 TimeCreation.prototype.invokeCreationClick = function(schedule) {
+    console.log('---------< ', schedule);
     var opt = this.timeGridView.options,
         range = datetime.range(
             opt.renderStartDate,

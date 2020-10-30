@@ -48,9 +48,12 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
     /**
      * @type {object}
      */
+
     this._dragStart = null;
 
-    this._dragStop = null;
+    this._gridStop = null;
+
+    this._dateDragEnd = null;
 
     this._dragStartDirection = null;
 
@@ -61,8 +64,6 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
     this._hourEndInDate = null;
 
     this._timeCreation = null;
-
-    this._onMouseMoveCreation = null;
 
     /**
      * @type {TimeResizeGuide}
@@ -77,7 +78,7 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
     if (dragHandler.contexts && dragHandler.contexts.length > 0) {
         for (var i = 0; i < dragHandler.contexts.length; i++) {
             var context = dragHandler.contexts[i];
-            if(context && context.length > 0)   {
+            if (context && context.length > 0) {
                 for (var k = 0; k < context.length; k++) {
                     var element = context[k];
                     if (element instanceof TimeCreation) {
@@ -85,7 +86,7 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
                     }
                 }
             }
-            
+
         }
     }
 }
@@ -93,7 +94,7 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
 /**
  * Destroy method
  */
-TimeResize.prototype.destroy = function() {
+TimeResize.prototype.destroy = function () {
     this._guide.destroy();
     this.dragHandler.off(this);
     this.dragHandler = this.timeGridView = this.baseController =
@@ -104,7 +105,7 @@ TimeResize.prototype.destroy = function() {
  * @param {HTMLElement} target - element to check condition.
  * @returns {object|boolean} - return time view instance or false
  */
-TimeResize.prototype.checkExpectCondition = function(target) {
+TimeResize.prototype.checkExpectCondition = function (target) {
     var container,
         matches;
 
@@ -127,7 +128,7 @@ TimeResize.prototype.checkExpectCondition = function(target) {
     return util.pick(this.timeGridView.children.items, Number(matches[1]));
 };
 
-TimeResize.prototype._getDragGrid = function() {
+TimeResize.prototype._getDragGrid = function () {
     var target = this.dragTarget,
         timeView = this.checkExpectCondition(target),
         blockElement = domutil.closest(target, config.classname('.time-date-schedule-block')),
@@ -142,25 +143,37 @@ TimeResize.prototype._getDragGrid = function() {
  * @emits TimeResize#timeResizeDragstart
  * @param {object} dragStartEventData - event data of Drag#dragstart
  */
-TimeResize.prototype._onDragStart = function(dragStartEventData) {
+TimeResize.prototype._onDragStart = function (dragStartEventData) {
     var target = this.dragTarget = dragStartEventData.target,
         timeView = this.checkExpectCondition(target),
         blockElement = domutil.closest(target, config.classname('.time-date-schedule-block')),
         ctrl = this.baseController,
-        targetModelID,
         getScheduleDataFunc,
+        opt = this.timeGridView.options,
+        timeCreation = this._timeCreation,
+        targetModelID,
+        scheduleData,
         schedule,
-        scheduleData;
+        dragGridRange;
 
-    if (this._timeCreation) {
-        this._onMouseMoveCreation = Object.assign(this._timeCreation._onMouseMove);
-        this._timeCreation.guide._clearGuideElement();
-        this._timeCreation._onMouseMove = null;
+    if (timeCreation) {
+        timeCreation.guide._clearGuideElement();
+        timeCreation._showCreationGuideOnClick = false;
+        timeCreation._showCreationGuideOnHover = false;
     }
 
     if (!timeView || !blockElement) {
         return;
     }
+
+    targetModelID = domutil.getData(blockElement, 'id');
+    schedule = ctrl.schedules.items[targetModelID];
+
+    if (schedule.resizable) {
+        return;
+    }
+
+    dragGridRange = this._getDragGrid();
 
     if (domutil.hasClass(target, config.classname('time-top-resize-handle'))) {
         this._dragStartDirection = 'top';
@@ -175,17 +188,17 @@ TimeResize.prototype._onDragStart = function(dragStartEventData) {
 
     scheduleData = this._dragStart = getScheduleDataFunc(
         dragStartEventData.originEvent, {
-            targetModelID: targetModelID,
-            schedule: schedule
-        }
+        targetModelID: targetModelID,
+        schedule: schedule
+    }
     );
 
-    this._hourStartInDate = new TZDate(scheduleData.nearestGridTimeY);
-    this._hourStartInDate.setHours(this.timeGridView.options.hourStart, 0, 0, 0);
+    this._hourStartInDate = new TZDate(dragGridRange.nearestGridTimeY);
+    this._hourStartInDate.setHours(opt.hourStart, 0, 0, 0);
 
-    this._hourEndInDate = new TZDate(scheduleData.nearestGridTimeY);
-    this._hourEndInDate.setHours(this.timeGridView.options.hourEnd, 0, 0, 0);
-    
+    this._hourEndInDate = new TZDate(dragGridRange.nearestGridTimeY);
+    this._hourEndInDate.setHours(opt.hourEnd, 0, 0, 0);
+
     this.dragHandler.on({
         drag: this._onDrag,
         dragEnd: this._onDragEnd,
@@ -207,7 +220,7 @@ TimeResize.prototype._onDragStart = function(dragStartEventData) {
      * @property {Schedule} schedule - schedule data
      */
     this.fire('timeResizeDragstart', scheduleData);
-    this._dragStop = null;
+    this._gridStop = null;
 };
 
 /**
@@ -217,59 +230,68 @@ TimeResize.prototype._onDragStart = function(dragStartEventData) {
  * @param {string} [overrideEventName] - override emitted event name when supplied.
  * @param {function} [revise] - supply function for revise schedule data before emit.
  */
-TimeResize.prototype._onDrag = function(dragEventData, overrideEventName, revise) {
-    var getScheduleDataFunc = this._getScheduleDataFunc,
-        startScheduleData = this._dragStart,
-        customCondResult,
+TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revise) {
+    var customCondResult,
         dragGridRange = this._getDragGrid(),
         gridStartY = dragGridRange.nearestGridY,
         gridEndY = dragGridRange.nearestGridEndY,
         opt = this.timeGridView.options,
         scheduleData;
 
-    if (!getScheduleDataFunc || !startScheduleData) {
+    if (!this._getScheduleDataFunc || !this._dragStart) {
         return;
     }
 
-    scheduleData = getScheduleDataFunc(dragEventData.originEvent, {
-        targetModelID: startScheduleData.targetModelID
+    scheduleData = this._getScheduleDataFunc(dragEventData.originEvent, {
+        targetModelID: this._dragStart.targetModelID
     });
 
-    if (this._currentGridY != scheduleData.nearestGridY) {
-        this._currentGridY = scheduleData.nearestGridY;
-        if (this._dragStartDirection == 'top') {
-            if (scheduleData.nearestGridY >= gridEndY - opt.ratioHourGridY[1]) {
+    if (this._dragStartDirection == 'top') {
+        if (scheduleData.nearestGridY >= gridEndY - opt.ratioHourGridY[1]) {
+            var quotient = Math.floor(gridEndY, 10), remainder = Number((gridEndY % 1).toFixed(2));
+            if (opt.ratioHourGridY.indexOf(remainder) < 0) {
+                scheduleData.nearestGridY = quotient + this._getNearestGridY(remainder, opt.ratioHourGridY, 'top') - opt.ratioHourGridY[1];
+            } else {
                 scheduleData.nearestGridY = gridEndY - opt.ratioHourGridY[1];
-                this._dragStop == null && (this._dragStop = scheduleData.nearestGridY);
-            } else if (scheduleData.nearestGridTimeY.getTime() <= this._hourStartInDate.getTime()) {
-                scheduleData.nearestGridY = 0;
-                this._dragStop == null && (this._dragStop = scheduleData.nearestGridY);
-            } else {
-                this._dragStop = null;
             }
-        } else if (this._dragStartDirection == 'bottom') {
-            if (scheduleData.nearestGridY <= gridStartY + opt.ratioHourGridY[1]) {
-                scheduleData.nearestGridY = gridStartY + opt.ratioHourGridY[1];
-                this._dragStop == null && (this._dragStop = scheduleData.nearestGridY);
-            } else if (scheduleData.nearestGridTimeY.getTime() >= this._hourEndInDate.getTime()) {
-                scheduleData.nearestGridY = this._hourEndInDate.getHours() - opt.hourStart + this._getNearestHour(this._hourEndInDate.getMinutes(), opt.minuteCell, opt.ratioHourGridY);
-                this._dragStop == null && (this._dragStop = scheduleData.nearestGridY);
-            } else {
-                this._dragStop = null;
-            }
-        } 
-        
-        if (this._checkExpectedConditionResize) {
-            customCondResult = this._checkExpectedConditionResize(scheduleData);
-            if (!customCondResult) {
-                // return;
-            }
+            this._gridStop == null && (this._gridStop = scheduleData);
+        } else if (scheduleData.nearestGridTimeY.getTime() <= this._hourStartInDate.getTime()) {
+            scheduleData.nearestGridY = 0;
+            this._gridStop == null && (this._gridStop = scheduleData);
+        } else {
+            this._gridStop = null;
+        }
+    } else if (this._dragStartDirection == 'bottom') {
+        if (scheduleData.nearestGridY <= gridStartY + opt.ratioHourGridY[1]) {
+            scheduleData.nearestGridY = gridStartY + opt.ratioHourGridY[1];
+            this._gridStop == null && (this._gridStop = scheduleData);
+        } else if (scheduleData.nearestGridTimeY.getTime() >= this._hourEndInDate.getTime()) {
+            var isAllDay = this._hourEndInDate.getDate() - this._hourStartInDate.getDate(), // from 00:00-xx to 00:00-xx+
+                _hourEnd = isAllDay >= 1 ? (isAllDay * 24) : this._hourEndInDate.getHours(); // convert 24 hours to get gridY
+
+            scheduleData.nearestGridY = _hourEnd - opt.hourStart + this._getNearestHour(this._hourEndInDate.getMinutes(), opt.minuteCell, opt.ratioHourGridY);
+            this._gridStop == null && (this._gridStop = scheduleData);
+        } else {
+            this._gridStop = null;
+        }
+    }
+
+    if (revise) {
+        revise(scheduleData);
+    }
+
+    if (this._checkExpectedConditionResize) {
+        customCondResult = this._checkExpectedConditionResize(scheduleData, dragGridRange, this._dragStartDirection);
+        if (customCondResult == true) {
+            this._dateDragEnd = null;
+            this.fire(overrideEventName || 'timeResizeDrag', scheduleData);
+        } else if (customCondResult == false) {
+            this._dateDragEnd = 0;
+        } else if (util.isNumber(customCondResult) && this._dateDragEnd == null) {
+            this._dateDragEnd = customCondResult;
         }
 
-        if (revise) {
-            revise(scheduleData);
-        }
-
+    } else {
         /**
          * @event TimeResize#timeResizeDrag
          * @type {object}
@@ -292,15 +314,19 @@ TimeResize.prototype._onDrag = function(dragEventData, overrideEventName, revise
  * @emits TimeResize#timeResizeDragend
  * @param {MouseEvent} dragEndEventData - Mouse event of Drag#dragEnd custom event.
  */
-TimeResize.prototype._onDragEnd = function(dragEndEventData) {
-    var getScheduleDataFunc = this._getScheduleDataFunc,
-        opt = this.timeGridView.options,
-        dragStart = this._dragStart,
+TimeResize.prototype._onDragEnd = function (dragEndEventData) {
+    var opt = this.timeGridView.options,
+        timeCreation = this._timeCreation,
         schedule,
+        dragGridRange = this._getDragGrid(),
+        gridStartTimeY = dragGridRange.nearestGridTimeY,
         scheduleData;
 
-    if (this._timeCreation) {
-        this._timeCreation._onMouseMove = this._onMouseMoveCreation;
+    if (timeCreation) {
+        setTimeout(function () {
+            timeCreation._showCreationGuideOnClick = true;
+            timeCreation._showCreationGuideOnHover = true;
+        }, 100);
     }
 
     this.dragHandler.off({
@@ -309,31 +335,45 @@ TimeResize.prototype._onDragEnd = function(dragEndEventData) {
         click: this._onClick
     }, this);
 
-    if (!getScheduleDataFunc || !dragStart) {
+    if (!this._getScheduleDataFunc) {
         return;
     }
 
-    scheduleData = getScheduleDataFunc(dragEndEventData.originEvent, {
-        targetModelID: dragStart.targetModelID
+    scheduleData = this._getScheduleDataFunc(dragEndEventData.originEvent, {
+        targetModelID: this._dragStart.targetModelID
     });
 
-    if (this._dragStop != null) {
+    schedule = this.baseController.schedules.items[scheduleData.targetModelID];
+
+    if (this._gridStop) {
         var newNearestGridTimeY,
-            hoursChange = opt.hourStart + parseInt(this._dragStop, 10),
-            minutesChange = datetime.minutesFromHours(this._dragStop % 1),
-            secondsChange  = 0,
+            hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
+            minutesChange = datetime.minutesFromHours(this._gridStop.nearestGridY % 1),
+            secondsChange = 0,
             millisecondsChange = 0;
-        newNearestGridTimeY = new TZDate(scheduleData.nearestGridTimeY);
+
+        hoursChange = hoursChange == 24 ? 0 : hoursChange;
+
+        newNearestGridTimeY = new TZDate(this._gridStop.nearestGridTimeY);
         newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
 
-        scheduleData.gridY = this._dragStop;
-        scheduleData.nearestGridY = this._dragStop;
-        scheduleData.nearestGridTimeY= newNearestGridTimeY;
+        scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
+        scheduleData.nearestGridTimeY = newNearestGridTimeY;
+    } else if (util.isNumber(this._dateDragEnd) && this._dateDragEnd > 0) {
+        var newNearestGridTimeY, newNearestGridY;
+
+        newNearestGridTimeY = new TZDate(gridStartTimeY);
+        newNearestGridTimeY.addMinutes(this._dateDragEnd);
+
+        newNearestGridY = newNearestGridTimeY.getHours() - opt.hourStart + this._getNearestHour(newNearestGridTimeY.getMinutes(), opt.minuteCell, opt.ratioHourGridY);
+
+        scheduleData.gridY = scheduleData.nearestGridY = newNearestGridY;
+        scheduleData.nearestGridTimeY = newNearestGridTimeY;
     }
 
-    schedule = this.baseController.schedules.items[scheduleData.targetModelID];
-        
-    if (this._dragStartDirection == 'top') {
+    if (this._dateDragEnd == 0) {
+        scheduleData.newTime = null;
+    } else if (this._dragStartDirection == 'top') {
         scheduleData.newTime = {
             start: scheduleData.nearestGridTimeY,
             end: schedule.end
@@ -364,7 +404,7 @@ TimeResize.prototype._onDragEnd = function(dragEndEventData) {
      */
     this.fire('timeResizeDragend', scheduleData);
 
-    this._getScheduleDataFunc = this._dragStart = this._dragStop = this._hourStartInDate = this._hourEndInDate = this._dragStartDirection = null;
+    this._getScheduleDataFunc = this._dragStart = this._gridStop = this._dateDragEnd = this._hourStartInDate = this._hourEndInDate = this._dragStartDirection = null;
 };
 
 /**
@@ -372,20 +412,27 @@ TimeResize.prototype._onDragEnd = function(dragEndEventData) {
  * @fires TimeResize#beforeUpdateSchedule
  * @param {object} scheduleData - schedule data from TimeResize#timeResizeDragend
  */
-TimeResize.prototype._updateSchedule = function(scheduleData) {
+TimeResize.prototype._updateSchedule = function (scheduleData) {
     var ctrl = this.baseController,
         modelID = scheduleData.targetModelID,
         schedule = ctrl.schedules.items[modelID],
+        timeChanges,
         changes;
 
     if (!schedule) {
         return;
     }
 
+    if (scheduleData.newTime) {
+        timeChanges = scheduleData.newTime;
+    } else {
+        timeChanges = schedule;
+    }
+
     changes = common.getScheduleChanges(
         schedule,
         ['start', 'end'],
-        { start: scheduleData.newTime.start, end: scheduleData.newTime.end }
+        timeChanges
     );
 
     /**
@@ -399,14 +446,15 @@ TimeResize.prototype._updateSchedule = function(scheduleData) {
      */
     this.fire('beforeUpdateSchedule', {
         schedule: schedule,
-        changes: changes
+        changes: changes,
+        type: 'resize'
     });
 };
 
 /**
  * @emits TimeResize#timeResizeClick
  */
-TimeResize.prototype._onClick = function() {
+TimeResize.prototype._onClick = function () {
     this.dragHandler.off({
         drag: this._onDrag,
         dragEnd: this._onDragEnd,
