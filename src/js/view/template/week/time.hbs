@@ -11,14 +11,18 @@
     {{#each this}}
         {{#each this}}
         {{#if this ~}}
-        <div class="{{CSS_PREFIX}}time-date-schedule-block {{#if model.isPending}} {{CSS_PREFIX}}time-date-schedule-block-pending{{/if}} {{model.dueDateClass}}" data-id="{{stamp model}}"
-            style="{{time-scheduleBlock this}};
+        <div class="{{CSS_PREFIX}}time-date-schedule-block {{#if model.isPending}} {{CSS_PREFIX}}time-date-schedule-block-pending{{/if}} {{model.dueDateClass}}"
+        data-id="{{stamp model}}" style="{{time-scheduleBlock this}};
                 {{#fi left '!==' 0}}
                     padding-left: {{@root.styles.paddingLeft}};
                 {{/fi}}
             ">
-            <div data-schedule-id="{{model.id}}" data-calendar-id="{{model.calendarId}}" class="{{CSS_PREFIX}}time-schedule {{#if model.isFocused}}{{CSS_PREFIX}}time-schedule-focused {{/if}}"
-                style="
+        {{#unless (or croppedEnd @root.isReadOnly model.isReadOnly)}}<div
+            class="{{CSS_PREFIX}}time-top-resize-handle handle-x" style="margin-left: {{@root.styles.paddingLeft}};">
+            &nbsp;</div>{{/unless}}
+        <div data-schedule-id="{{model.id}}" data-calendar-id="{{model.calendarId}}"
+            class="{{CSS_PREFIX}}time-schedule {{#if model.isFocused}}{{CSS_PREFIX}}time-schedule-focused {{/if}}"
+            style="
                 {{#unless croppedEnd}}
                     border-bottom-left-radius: {{@root.styles.borderRadius}};
                     border-bottom-right-radius: {{@root.styles.borderRadius}};
@@ -61,10 +65,12 @@
                 {{/if}};">{{{comingDuration-tmpl model}}}</div>
             {{/if}}
             </div>
-            {{#unless (or croppedEnd @root.isReadOnly model.isReadOnly)}}<div class="{{CSS_PREFIX}}time-resize-handle handle-x" style="margin-left: {{@root.styles.paddingLeft}};">&nbsp;</div>{{/unless}}
-        </div>
-        {{/if ~}}
-        {{/each}}
+            {{#unless (or croppedEnd @root.isReadOnly model.isReadOnly)}}<div
+            class="{{CSS_PREFIX}}time-bottom-resize-handle handle-x" style="margin-left: {{@root.styles.paddingLeft}};">
+            &nbsp;</div>{{/unless}}
+    </div>
+    {{/if ~}}
+    {{/each}}
     {{/each}}
 {{/each}}
 </div>

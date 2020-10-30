@@ -69,13 +69,6 @@
         disableClick: true,
         disableDblClick: true,
         showCreationGuideOnHover: true,
-        customCheckExpectedCondition: function (time) { //eslint-disable-line
-            // console.log(new Date(time.timeY), availableTime);
-
-            return {
-                endTime: new Date().setHours(new Date().getHours() + (Math.floor(Math.random() * 2) + 1))
-            };
-        },
         onClickCreationGuide: function(startTime, endTime) {
             console.log('time', {
                 startTime: startTime,

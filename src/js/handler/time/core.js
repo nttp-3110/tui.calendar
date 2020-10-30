@@ -16,26 +16,53 @@ var TZDate = require('../../common/timezone').Date;
  */
 var timeCore = {
     /**
+     * Get the nearest hour
+     * @param {number} minutes - minutes
+     * @returns {number} hour
+     */
+    _getNearestHour: function(minutes, minMinute, ratioHourGridY) {
+        if (ratioHourGridY[minutes / minMinute]) {
+            return ratioHourGridY[minutes / minMinute];
+        } else if (minutes === 0) {
+            return 0;
+        } else if (minutes > 30) {
+            return 1;
+        } else if (minutes <= 30) {
+            return 0.5;
+        }
+        return 0;
+    },
+
+    /**
      * Get Y index ratio(hour) in time grids by supplied parameters.
      * @param {number} baseMil - base milliseconds number for supplied height.
      * @param {number} height - container element height.
      * @param {number} y - Y coordinate to calculate hour ratio.
      * @returns {number} hour index ratio value.
      */
-    _calcGridYIndex: function(baseMil, height, y, options) {
+    _calcGridYIndex: function(baseMil, height, y, options, nearestBy) {
         // get ratio from right expression > point.y : x = session.height : baseMil
         // and convert milliseconds value to hours.
-        // console.log(options, ' ===> options ');
         var result = datetime.millisecondsTo('hour', (y * baseMil) / height),
             floored = result | 0,
-            // nearest = common.nearest(result - floored, options.ratioGridY);
-            nearest;
-            for (var i = 0; i < options.ratioGridY.length; i++) {
-                var element = options.ratioGridY[i];
-                if((result - floored) <= element) {
-                    nearest = options.ratioGridY[i - 1] || 0;
-                    break;
+            nearestTop = nearestBy === 1, // top
+            nearestBottom = nearestBy === 2, // bottom
+            nearest; 
+
+            if (nearestTop || nearestBottom) {
+                for (var i = 0; i < options.ratioHourGridY.length; i++) {
+                    var element = options.ratioHourGridY[i];
+                    if ((result - floored) <= element) {
+                        if (nearestTop) {
+                            nearest = options.ratioHourGridY[i - 1] || 0;
+                        } else if (nearestBottom) {
+                            nearest = options.ratioHourGridY[i] || 0;
+                        }
+                        break;
+                    }
                 }
+            } else {
+                nearest = common.nearest(result - floored, options.ratioHourGridY);
             }
         return floored + (nearest || 0);
     },
@@ -45,7 +72,7 @@ var timeCore = {
      * @param {Time} timeView - Instance of time view.
      * @returns {function} - Function that return event data from mouse event.
      */
-    _retriveScheduleData: function(timeView) {
+    _retriveScheduleData: function(timeView, nearestBy) {
         var self = this,
             container = timeView.container,
             options = timeView.options,
@@ -63,7 +90,7 @@ var timeCore = {
             var mouseY = Point.n(domevent.getMousePosition(mouseEvent.originEvent || mouseEvent, container)).y,
                 gridY = common.ratio(viewHeight, hourLength, mouseY),
                 timeY = new TZDate(viewTime).addMinutes(datetime.minutesFromHours(gridY)),
-                nearestGridY = self._calcGridYIndex(baseMil, viewHeight, mouseY, options),
+                nearestGridY = self._calcGridYIndex(baseMil, viewHeight, mouseY, options, nearestBy),
                 nearestGridTimeY = new TZDate(viewTime).addMinutes(
                     datetime.minutesFromHours(nearestGridY + options.hourStart)
                 );
@@ -89,7 +116,9 @@ var timeCore = {
      * @returns {function} - Function that return event data from mouse event.
      */
     _retriveScheduleDataFromDate: function(timeView) {
-        var viewTime = timeView.getDate();
+        var self = this,
+            viewTime = timeView.getDate(),
+            options = timeView.options;
 
         /**
          * @param {TZDate} startDate - start date
@@ -99,12 +128,11 @@ var timeCore = {
          */
         return util.bind(function(startDate, endDate, hourStart) {
             var gridY, timeY, nearestGridY, nearestGridTimeY, nearestGridEndY, nearestGridEndTimeY;
-
-            gridY = startDate.getHours() - hourStart + getNearestHour(startDate.getMinutes());
+            gridY = startDate.getHours() - hourStart + self._getNearestHour(startDate.getMinutes(), options.minuteCell, options.ratioHourGridY);
             timeY = new TZDate(viewTime).addMinutes(datetime.minutesFromHours(gridY));
             nearestGridY = gridY;
+            nearestGridEndY = endDate.getHours() - hourStart + self._getNearestHour(endDate.getMinutes(), options.minuteCell, options.ratioHourGridY);
             nearestGridTimeY = new TZDate(viewTime).addMinutes(datetime.minutesFromHours(nearestGridY));
-            nearestGridEndY = endDate.getHours() - hourStart + getNearestHour(endDate.getMinutes());
             nearestGridEndTimeY = new TZDate(viewTime).addMinutes(datetime.minutesFromHours(nearestGridEndY));
 
             return util.extend({
@@ -137,23 +165,5 @@ var timeCore = {
         });
     }
 };
-
-/**
- * Get the nearest hour
- * @param {number} minutes - minutes
- * @returns {number} hour
- */
-function getNearestHour(minutes) {
-    var nearestHour;
-    if (minutes === 0) {
-        nearestHour = 0;
-    } else if (minutes > 30) {
-        nearestHour = 1;
-    } else if (minutes <= 30) {
-        nearestHour = 0.5;
-    }
-
-    return nearestHour;
-}
 
 module.exports = timeCore;

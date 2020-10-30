@@ -151,9 +151,31 @@ function TimeGrid(name, options, panelElement) {
             positionHourMarker: 'all',
             onlyShowInRange: false
         },
-        ratioGridY: [0, 0.25, 0.5, 0.75, 1]
+        minuteCell: options.minuteCell || 15,
+        ratioHourGridY: []
     }, options.week);
 
+    if (options.ratioHourGridY) {
+        this.options.ratioHourGridY = options.ratioHourGridY;
+    } else {
+        var unitRatio = 60 / options.minuteCell;
+        var unitInAHour = 1 / unitRatio;
+        var ratioHourGridY = [0];
+        for (var i = 1; i < Array(unitRatio).length; i++) {
+            ratioHourGridY.push(unitInAHour * i);
+        }
+        ratioHourGridY.push(1);
+        this.options.ratioHourGridY = ratioHourGridY;
+    }
+
+    if (options.disabledGrid) {
+        this.options.disabledGrid = {
+            isDisabled: options.disabledGrid.isDisabled,
+            hourDisabled: options.disabledGrid.hourDisabled,
+            elementDisabled: options.disabledGrid.elementDisabled
+        };
+    }
+    
     if (options.disabledGrid) {
         this.options.disabledGrid = {
             isDisabled: options.disabledGrid.isDisabled,
@@ -441,24 +463,19 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
                 elementDisabled = null;
             }
         }
-        childOption = {
+        childOption = util.extend(options, {
             index: i,
             left: grids[i] ? grids[i].left : 0,
             width: grids[i] ? grids[i].width : 0,
             ymd: ymd,
             isToday: isToday,
-            isPending: options.isPending,
-            isFocused: options.isFocused,
-            isReadOnly: options.isReadOnly,
-            hourStart: options.hourStart,
-            hourEnd: options.hourEnd,
             disabledGrid: {
                 isDisabled: isDisableGrid,
                 hourDisabled: Number(ratioByHourDisabled.toFixed(2)),
                 elementDisabled: elementDisabled
-            },
-            ratioGridY: options.ratioGridY
-        };
+            }
+        });
+
         child = new Time(
             childOption,
             domutil.appendHTMLElement('div', container, config.classname('time-date')),

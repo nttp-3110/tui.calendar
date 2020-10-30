@@ -15,8 +15,6 @@ var TimeCreationGuide = require('./creationGuide');
 var TZDate = require('../../common/timezone').Date;
 var timeCore = require('./core');
 
-var CLICK_DELAY = 300;
-var HOVER_DELAY = 50;
 /**
  * @constructor
  * @implements {Handler}
@@ -86,7 +84,12 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
     /**
      * @type {function}
      */
-    this._customCheckExpectedCondition = options.customCheckExpectedCondition;
+    this._checkExpectedConditionHover = options.checkExpectedConditionHover;
+
+    /**
+     * @type {function}
+     */
+    this._checkExpectedConditionClick = options.checkExpectedConditionClick;
 
     /**
      * @type {function}
@@ -98,20 +101,39 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
      */
     this._disableClick = options.disableClick;
 
+    this.HOVER_DELAY = (options.timeDelay && options.timeDelay.hover) || 2000;
+
+    this.CLICK_DELAY = (options.timeDelay && options.timeDelay.click) || 300;
+
+    var debounce = function(func, delay) {
+        var inDebounce
+        return function() {
+            var context = this
+            var args = arguments
+            clearTimeout(inDebounce)
+            inDebounce = setTimeout(function() {
+                return func.apply(context, args);
+            }, delay);
+        }
+    }
+
     dragHandler.on('dragStart', this._onDragStart, this);
     dragHandler.on('click', this._onClick, this);
 
     if (this._showCreationGuideOnClick) {
         domevent.on(timeGridView.container, 'click', this._onClick, this);
     }
-    
+
     if (this._showCreationGuideOnHover) {
-        domevent.on(timeGridView.container, 'mousemove', this._onMouseMove, this);
+        var onHoverDelay = debounce(function(evt) {
+            this._onMouseMove(evt);
+        }, this.HOVER_DELAY);
+        domevent.on(timeGridView.container, 'mousemove', onHoverDelay, this);
         domevent.on(timeGridView.container, 'mouseleave', this._onMouseLeave, this);
     }
 
     if (this._disableDblClick) {
-        CLICK_DELAY = 0;
+        this.CLICK_DELAY = 0;
     } else {
         domevent.on(timeGridView.container, 'dblclick', this._onDblClick, this);
     }
@@ -335,8 +357,12 @@ TimeCreation.prototype._onDragEnd = function(dragEndEventData) {
  * @param {object} clickEventData - event data from Drag#click.
  */
 TimeCreation.prototype._onMouseMove = function(clickEventData) {
-    var self = this;
-    var condResult, getScheduleDataFunc, eventData, customCondResult;
+    var self = this,
+        condResult,
+        getScheduleDataFunc,
+        eventData,
+        customCondResult;
+
     this.dragHandler.off({
         drag: this._onDrag,
         dragEnd: this._onDragEnd
@@ -349,10 +375,10 @@ TimeCreation.prototype._onMouseMove = function(clickEventData) {
         return;
     }
 
-    getScheduleDataFunc = this._retriveScheduleData(condResult);
+    getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
     eventData = getScheduleDataFunc(clickEventData);
-    if (this._customCheckExpectedCondition) {
-        customCondResult = this._customCheckExpectedCondition(eventData);
+    if (this._checkExpectedConditionHover) {
+        customCondResult = this._checkExpectedConditionHover(eventData);
         if (!customCondResult) {
             return;
         }
@@ -361,13 +387,11 @@ TimeCreation.prototype._onMouseMove = function(clickEventData) {
     eventData.delta = customCondResult.delta;
     eventData.template = this._creationGuideTemplate;
     this._requestOnHover = true;
-    setTimeout(function() {
-        if (self._requestOnHover) {
-            self.fire('timeCreationHover', eventData);
-            // self._createSchedule(eventData);
-        }
-        self._requestOnHover = false;
-    }, HOVER_DELAY);
+    if (self._requestOnHover) {
+        self.fire('timeCreationHover', eventData);
+        // self._createSchedule(eventData);
+    }
+    self._requestOnHover = false;
     this._dragStart = this._getScheduleDataFunc = null;
 };
 
@@ -405,10 +429,10 @@ TimeCreation.prototype._onClick = function(clickEventData) {
         return;
     }
 
-    getScheduleDataFunc = this._retriveScheduleData(condResult);
+    getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
     eventData = getScheduleDataFunc(clickEventData);
-    if (this._customCheckExpectedCondition) {
-        customCondResult = this._customCheckExpectedCondition(eventData);
+    if (this._checkExpectedConditionClick) {
+        customCondResult = this._checkExpectedConditionClick(eventData);
         if (!customCondResult) {
             return;
         }
@@ -425,7 +449,7 @@ TimeCreation.prototype._onClick = function(clickEventData) {
             self.guide._clickGuideElement(self.guide.guideElement.getBoundingClientRect());
         }
         self._requestOnClick = false;
-    }, CLICK_DELAY);
+    }, this.CLICK_DELAY);
     this._dragStart = this._getScheduleDataFunc = null;
 };
 
