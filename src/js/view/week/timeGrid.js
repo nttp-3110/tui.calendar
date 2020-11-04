@@ -175,14 +175,6 @@ function TimeGrid(name, options, panelElement) {
             elementDisabled: options.disabledGrid.elementDisabled
         };
     }
-    
-    if (options.disabledGrid) {
-        this.options.disabledGrid = {
-            isDisabled: options.disabledGrid.isDisabled,
-            hourDisabled: options.disabledGrid.hourDisabled,
-            elementDisabled: options.disabledGrid.elementDisabled
-        };
-    }
 
     if (options.currentTimeSettings) {
         this.options.currentTimeSettings = {
@@ -463,7 +455,10 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
                 elementDisabled = null;
             }
         }
-        childOption = util.extend(options, {
+
+        var optionsClone = Object.assign({}, options);
+
+        childOption = util.extend(optionsClone, {
             index: i,
             left: grids[i] ? grids[i].left : 0,
             width: grids[i] ? grids[i].width : 0,
