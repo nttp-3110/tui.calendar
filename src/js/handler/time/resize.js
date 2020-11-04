@@ -51,19 +51,22 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
 
     this._dragStart = null;
 
-    this._gridStop = null;
+    this._dragStartDirection = null;
 
     this._dateDragEnd = null;
 
-    this._dragStartDirection = null;
+    this._gridStop = null;
 
     this._currentGridY = null;
 
-    this._hourStartInDate = null;
-
-    this._hourEndInDate = null;
+    this._rangeTime = null;
 
     this._timeCreation = null;
+
+    this._flagSwitchEvent = {
+        click: false,
+        hover: false
+    };
 
     /**
      * @type {TimeResizeGuide}
@@ -128,15 +131,30 @@ TimeResize.prototype.checkExpectCondition = function (target) {
     return util.pick(this.timeGridView.children.items, Number(matches[1]));
 };
 
-TimeResize.prototype._getDragGrid = function () {
-    var target = this.dragTarget,
-        timeView = this.checkExpectCondition(target),
-        blockElement = domutil.closest(target, config.classname('.time-date-schedule-block')),
-        ctrl = this.baseController,
-        targetModelID = domutil.getData(blockElement, 'id'),
-        schedule = ctrl.schedules.items[targetModelID],
-        getScheduleDataFromDateFunc = this._retriveScheduleDataFromDate(timeView);
-    return getScheduleDataFromDateFunc(schedule.start, schedule.end, this.timeGridView.options.hourStart);
+TimeResize.prototype._checkRangeGridY = function (gridY) {
+    var newGridY = gridY;
+    newGridY = Math.max(newGridY, this._rangeTime.nearestGridY);
+    newGridY = Math.min(newGridY, this._rangeTime.nearestGridEndY);
+    return newGridY;
+}
+
+TimeResize.prototype._getDragGridY = function (start, end) {
+    var opt = this.timeGridView.options,
+        nearestGridY = start.getHours() - opt.hourStart + this._getNearestHour(start.getMinutes(), opt.minuteCell, opt.ratioHourGridY),
+        nearestGridEndY = end.getHours() - opt.hourStart + this._getNearestHour(end.getMinutes(), opt.minuteCell, opt.ratioHourGridY),
+        dragGridY;
+
+    if (end.getDate() - start.getDate() >= 1) {
+        nearestGridEndY = opt.hourEnd;
+    }
+    dragGridY = {
+        nearestGridY: nearestGridY,
+        nearestGridTimeY: start,
+        nearestGridEndY: nearestGridEndY,
+        nearestGridEndTimeY: end
+    };
+
+    return dragGridY;
 }
 
 /**
@@ -154,13 +172,9 @@ TimeResize.prototype._onDragStart = function (dragStartEventData) {
         targetModelID,
         scheduleData,
         schedule,
+        rangeStart,
+        rangeEnd,
         dragGridRange;
-
-    if (timeCreation) {
-        timeCreation.guide._clearGuideElement();
-        timeCreation._showCreationGuideOnClick = false;
-        timeCreation._showCreationGuideOnHover = false;
-    }
 
     if (!timeView || !blockElement) {
         return;
@@ -173,7 +187,7 @@ TimeResize.prototype._onDragStart = function (dragStartEventData) {
         return;
     }
 
-    dragGridRange = this._getDragGrid();
+    dragGridRange = this._getDragGridY(schedule.start, schedule.end);
 
     if (domutil.hasClass(target, config.classname('time-top-resize-handle'))) {
         this._dragStartDirection = 'top';
@@ -183,21 +197,36 @@ TimeResize.prototype._onDragStart = function (dragStartEventData) {
         getScheduleDataFunc = this._getScheduleDataFunc = this._retriveScheduleData(timeView, 2);
     }
 
+    if (this._dragStartDirection && timeCreation) {
+        timeCreation.guide._clearGuideElement();
+        if (timeCreation._showCreationGuideOnClick) {
+            this._flagSwitchEvent.click = true;
+            timeCreation._showCreationGuideOnClick = false;
+        }
+        if (timeCreation._showCreationGuideOnHover) {
+            this._flagSwitchEvent.hover = true;
+            timeCreation._showCreationGuideOnHover = false;
+        }
+    }
+
     targetModelID = domutil.getData(blockElement, 'id');
     schedule = ctrl.schedules.items[targetModelID];
+
+    rangeStart = new TZDate(dragGridRange.nearestGridTimeY);
+    rangeStart.setHours(opt.hourStart, 0, 0, 0);
+
+    rangeEnd = new TZDate(dragGridRange.nearestGridTimeY);
+    rangeEnd.setHours(opt.hourEnd - 1, 59, 59, 0);
+
+    this._rangeTime = this._getDragGridY(rangeStart, rangeEnd);
 
     scheduleData = this._dragStart = getScheduleDataFunc(
         dragStartEventData.originEvent, {
         targetModelID: targetModelID,
-        schedule: schedule
+        schedule: schedule,
+        rangeTime: this._rangeTime
     }
     );
-
-    this._hourStartInDate = new TZDate(dragGridRange.nearestGridTimeY);
-    this._hourStartInDate.setHours(opt.hourStart, 0, 0, 0);
-
-    this._hourEndInDate = new TZDate(dragGridRange.nearestGridTimeY);
-    this._hourEndInDate.setHours(opt.hourEnd, 0, 0, 0);
 
     this.dragHandler.on({
         drag: this._onDrag,
@@ -232,81 +261,104 @@ TimeResize.prototype._onDragStart = function (dragStartEventData) {
  */
 TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revise) {
     var customCondResult,
-        dragGridRange = this._getDragGrid(),
-        gridStartY = dragGridRange.nearestGridY,
-        gridEndY = dragGridRange.nearestGridEndY,
         opt = this.timeGridView.options,
-        scheduleData;
+        schedule,
+        scheduleData,
+        dragGridRange,
+        gridStartY,
+        gridEndY;
 
     if (!this._getScheduleDataFunc || !this._dragStart) {
         return;
     }
 
+    schedule = this._dragStart.schedule;
+    dragGridRange = this._getDragGridY(schedule.start, schedule.end);
+    gridStartY = dragGridRange.nearestGridY;
+    gridEndY = dragGridRange.nearestGridEndY;
+
     scheduleData = this._getScheduleDataFunc(dragEventData.originEvent, {
-        targetModelID: this._dragStart.targetModelID
+        targetModelID: this._dragStart.targetModelID,
+        gridStartY: dragGridRange.nearestGridY,
+        gridEndY: dragGridRange.nearestGridEndY,
+        rangeTime: this._rangeTime
     });
 
-    if (this._dragStartDirection == 'top') {
-        if (scheduleData.nearestGridY >= gridEndY - opt.ratioHourGridY[1]) {
-            var quotient = Math.floor(gridEndY, 10), remainder = Number((gridEndY % 1).toFixed(2));
-            if (opt.ratioHourGridY.indexOf(remainder) < 0) {
-                scheduleData.nearestGridY = quotient + this._getNearestGridY(remainder, opt.ratioHourGridY, 'top') - opt.ratioHourGridY[1];
+    if (this._currentGridY != scheduleData.nearestGridY) {
+        this._currentGridY = scheduleData.nearestGridY;
+        if (this._dragStartDirection == 'top') {
+            if (scheduleData.nearestGridY >= gridEndY - opt.ratioHourGridY[1]) {
+                var quotient = Math.floor(gridEndY, 10),
+                    remainder = Number((gridEndY % 1).toFixed(2)),
+                    nearestRemainder = this._getNearestGridY(remainder, opt.ratioHourGridY, 'top');
+
+                if (scheduleData.nearestGridY >= opt.hourEnd - opt.ratioHourGridY[1]) {
+                    scheduleData.nearestGridY = quotient + nearestRemainder;
+                } else if (opt.ratioHourGridY.indexOf(remainder) < 0) {
+                    scheduleData.nearestGridY = quotient + nearestRemainder - opt.ratioHourGridY[1];
+                } else {
+                    scheduleData.nearestGridY = gridEndY - opt.ratioHourGridY[1];
+                }
+                this._gridStop == null && (this._gridStop = scheduleData);
+            } else if (scheduleData.nearestGridTimeY.getTime() <= this._rangeTime.nearestGridTimeY.getTime()) {
+                scheduleData.nearestGridY = 0;
+                this._gridStop == null && (this._gridStop = scheduleData);
             } else {
-                scheduleData.nearestGridY = gridEndY - opt.ratioHourGridY[1];
+                this._gridStop = null;
             }
-            this._gridStop == null && (this._gridStop = scheduleData);
-        } else if (scheduleData.nearestGridTimeY.getTime() <= this._hourStartInDate.getTime()) {
-            scheduleData.nearestGridY = 0;
-            this._gridStop == null && (this._gridStop = scheduleData);
-        } else {
-            this._gridStop = null;
+        } else if (this._dragStartDirection == 'bottom') {
+            if (scheduleData.nearestGridY <= gridStartY + opt.ratioHourGridY[1]) {
+                scheduleData.nearestGridY = gridStartY + opt.ratioHourGridY[1];
+                this._gridStop == null && (this._gridStop = scheduleData);
+            } else if (scheduleData.nearestGridTimeY.getTime() >= this._rangeTime.nearestGridEndTimeY.getTime()) {
+                var isAllDay = this._rangeTime.nearestGridEndTimeY.getDate() - this._rangeTime.nearestGridTimeY.getDate(), // from 00:00-xx to 00:00-xx+
+                    _hourEnd = isAllDay >= 1 ? (isAllDay * 24) : this._rangeTime.nearestGridEndTimeY.getHours(); // convert 24 hours to get gridY
+
+                scheduleData.nearestGridY = _hourEnd - opt.hourStart + this._getNearestHour(this._rangeTime.nearestGridEndTimeY.getMinutes(), opt.minuteCell, opt.ratioHourGridY);
+                this._gridStop == null && (this._gridStop = scheduleData);
+            } else {
+                this._gridStop = null;
+            }
         }
-    } else if (this._dragStartDirection == 'bottom') {
-        if (scheduleData.nearestGridY <= gridStartY + opt.ratioHourGridY[1]) {
-            scheduleData.nearestGridY = gridStartY + opt.ratioHourGridY[1];
-            this._gridStop == null && (this._gridStop = scheduleData);
-        } else if (scheduleData.nearestGridTimeY.getTime() >= this._hourEndInDate.getTime()) {
-            var isAllDay = this._hourEndInDate.getDate() - this._hourStartInDate.getDate(), // from 00:00-xx to 00:00-xx+
-                _hourEnd = isAllDay >= 1 ? (isAllDay * 24) : this._hourEndInDate.getHours(); // convert 24 hours to get gridY
 
-            scheduleData.nearestGridY = _hourEnd - opt.hourStart + this._getNearestHour(this._hourEndInDate.getMinutes(), opt.minuteCell, opt.ratioHourGridY);
-            this._gridStop == null && (this._gridStop = scheduleData);
-        } else {
-            this._gridStop = null;
+        if (revise) {
+            revise(scheduleData);
         }
-    }
 
-    if (revise) {
-        revise(scheduleData);
-    }
+        scheduleData.nearestGridY = this._checkRangeGridY(scheduleData.nearestGridY);
+        this._gridStop != null && (this._gridStop.nearestGridY = this._checkRangeGridY(this._gridStop.nearestGridY));
 
-    if (this._checkExpectedConditionResize) {
-        customCondResult = this._checkExpectedConditionResize(scheduleData, dragGridRange, this._dragStartDirection);
-        if (customCondResult == true) {
-            this._dateDragEnd = null;
+        if (this._checkExpectedConditionResize) {
+            customCondResult = this._checkExpectedConditionResize(scheduleData, dragGridRange, this._dragStartDirection);
+            if (typeof customCondResult === 'boolean') {
+                if (customCondResult) {
+                    this._dateDragEnd = null;
+                    this.fire(overrideEventName || 'timeResizeDrag', scheduleData);
+                } else {
+                    this._dateDragEnd = 0;
+                }
+            } else if (util.isNumber(customCondResult) && this._dateDragEnd == null) {
+                this._dateDragEnd = customCondResult;
+            }
+
+        } else {
+            /**
+             * @event TimeResize#timeResizeDrag
+             * @type {object}
+             * @property {HTMLElement} target - current target in mouse event object.
+             * @property {Time} relatedView - time view instance related with drag start position.
+             * @property {MouseEvent} originEvent - mouse event object.
+             * @property {number} mouseY - mouse Y px mouse event.
+             * @property {number} gridY - grid Y index value related with mouseY value.
+             * @property {number} timeY - milliseconds value of mouseY points.
+             * @property {number} nearestGridY - nearest grid index related with mouseY value.
+             * @property {number} nearestGridTimeY - time value for nearestGridY.
+             * @property {string} targetModelID - The model unique id emitted move schedule.
+             */
             this.fire(overrideEventName || 'timeResizeDrag', scheduleData);
-        } else if (customCondResult == false) {
-            this._dateDragEnd = 0;
-        } else if (util.isNumber(customCondResult) && this._dateDragEnd == null) {
-            this._dateDragEnd = customCondResult;
         }
-
-    } else {
-        /**
-         * @event TimeResize#timeResizeDrag
-         * @type {object}
-         * @property {HTMLElement} target - current target in mouse event object.
-         * @property {Time} relatedView - time view instance related with drag start position.
-         * @property {MouseEvent} originEvent - mouse event object.
-         * @property {number} mouseY - mouse Y px mouse event.
-         * @property {number} gridY - grid Y index value related with mouseY value.
-         * @property {number} timeY - milliseconds value of mouseY points.
-         * @property {number} nearestGridY - nearest grid index related with mouseY value.
-         * @property {number} nearestGridTimeY - time value for nearestGridY.
-         * @property {string} targetModelID - The model unique id emitted move schedule.
-         */
-        this.fire(overrideEventName || 'timeResizeDrag', scheduleData);
     }
+
 };
 
 /**
@@ -317,15 +369,16 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
 TimeResize.prototype._onDragEnd = function (dragEndEventData) {
     var opt = this.timeGridView.options,
         timeCreation = this._timeCreation,
+        _flagSwitchEvent = this._flagSwitchEvent,
         schedule,
-        dragGridRange = this._getDragGrid(),
-        gridStartTimeY = dragGridRange.nearestGridTimeY,
+        dragGridRange,
+        gridStartTimeY,
         scheduleData;
 
     if (timeCreation) {
         setTimeout(function () {
-            timeCreation._showCreationGuideOnClick = true;
-            timeCreation._showCreationGuideOnHover = true;
+            _flagSwitchEvent.click && (timeCreation._showCreationGuideOnClick = true);
+            _flagSwitchEvent.hover && (timeCreation._showCreationGuideOnHover = true);
         }, 100);
     }
 
@@ -339,27 +392,17 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
         return;
     }
 
+    schedule = this._dragStart.schedule;
+    dragGridRange = this._getDragGridY(schedule.start, schedule.end);
+    gridStartTimeY = dragGridRange.nearestGridTimeY;
+
     scheduleData = this._getScheduleDataFunc(dragEndEventData.originEvent, {
         targetModelID: this._dragStart.targetModelID
     });
 
     schedule = this.baseController.schedules.items[scheduleData.targetModelID];
 
-    if (this._gridStop) {
-        var newNearestGridTimeY,
-            hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
-            minutesChange = datetime.minutesFromHours(this._gridStop.nearestGridY % 1),
-            secondsChange = 0,
-            millisecondsChange = 0;
-
-        hoursChange = hoursChange == 24 ? 0 : hoursChange;
-
-        newNearestGridTimeY = new TZDate(this._gridStop.nearestGridTimeY);
-        newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
-
-        scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
-        scheduleData.nearestGridTimeY = newNearestGridTimeY;
-    } else if (util.isNumber(this._dateDragEnd) && this._dateDragEnd > 0) {
+    if (util.isNumber(this._dateDragEnd)) {
         var newNearestGridTimeY, newNearestGridY;
 
         newNearestGridTimeY = new TZDate(gridStartTimeY);
@@ -369,20 +412,48 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
 
         scheduleData.gridY = scheduleData.nearestGridY = newNearestGridY;
         scheduleData.nearestGridTimeY = newNearestGridTimeY;
-    }
 
-    if (this._dateDragEnd == 0) {
-        scheduleData.newTime = null;
-    } else if (this._dragStartDirection == 'top') {
-        scheduleData.newTime = {
-            start: scheduleData.nearestGridTimeY,
-            end: schedule.end
-        };
-    } else if (this._dragStartDirection == 'bottom') {
-        scheduleData.newTime = {
-            start: schedule.start,
-            end: scheduleData.nearestGridTimeY
-        };
+        if (this._dateDragEnd == 0) {
+            scheduleData.newTime = null;
+        } else if (this._dragStartDirection == 'top') {
+            scheduleData.newTime = {
+                start: scheduleData.nearestGridTimeY,
+                end: schedule.end
+            };
+        } else if (this._dragStartDirection == 'bottom') {
+            scheduleData.newTime = {
+                start: schedule.start,
+                end: scheduleData.nearestGridTimeY
+            };
+        }
+    } else {
+        if (this._gridStop) {
+            var newNearestGridTimeY,
+                hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
+                minutesChange = Math.round(datetime.minutesFromHours(this._gridStop.nearestGridY % 1)),
+                secondsChange = 0,
+                millisecondsChange = 0;
+
+            hoursChange = hoursChange == 24 ? 0 : hoursChange;
+
+            newNearestGridTimeY = new TZDate(this._gridStop.nearestGridTimeY);
+            newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
+
+            scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
+            scheduleData.nearestGridTimeY = newNearestGridTimeY;
+        }
+
+        if (this._dragStartDirection == 'top') {
+            scheduleData.newTime = {
+                start: scheduleData.nearestGridTimeY,
+                end: schedule.end
+            };
+        } else if (this._dragStartDirection == 'bottom') {
+            scheduleData.newTime = {
+                start: schedule.start,
+                end: scheduleData.nearestGridTimeY
+            };
+        }
     }
 
     this._updateSchedule(scheduleData);
@@ -404,7 +475,12 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
      */
     this.fire('timeResizeDragend', scheduleData);
 
-    this._getScheduleDataFunc = this._dragStart = this._gridStop = this._dateDragEnd = this._hourStartInDate = this._hourEndInDate = this._dragStartDirection = null;
+    this._flagSwitchEvent = {
+        click: false,
+        hover: false
+    }
+
+    this._getScheduleDataFunc = this._dragStart = this._gridStop = this._dateDragEnd = this._currentGridY = this._rangeTime = this._dragStartDirection = null;
 };
 
 /**

@@ -102,6 +102,10 @@ var timeCore = {
                     datetime.minutesFromHours(nearestGridY + options.hourStart)
                 );
 
+                if (nearestGridY == options.hourEnd) {
+                    nearestGridTimeY.addSeconds(-1);
+                }
+
             return util.extend({
                 target: mouseEvent.target || mouseEvent.srcElement,
                 relatedView: timeView,
