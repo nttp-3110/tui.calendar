@@ -354,14 +354,14 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
         timeSlots = getHoursLabels(opt, currentHours >= 0, timezoneDifference, styles);
         lastTimeSlot = timeSlots[timeSlots.length - 1];
         
-        timeSlots.push({
-            hour: lastTimeSlot.hour + 1,
-            minutes: lastTimeSlot.minutes,
-            color: lastTimeSlot.color,
-            fontWeight: lastTimeSlot.fontWeight,
-            hidden: lastTimeSlot.hour + 1 == nowHours,
-            isEndTime: true
-        })
+        // timeSlots.push({
+        //     hour: lastTimeSlot.hour + 1,
+        //     minutes: lastTimeSlot.minutes,
+        //     color: lastTimeSlot.color,
+        //     fontWeight: lastTimeSlot.fontWeight,
+        //     hidden: lastTimeSlot.hour + 1 == nowHours,
+        //     isEndTime: true
+        // })
 
         hourmarker.setMinutes(hourmarker.getMinutes() + timezoneDifference);
         dateDifference = hourmarker.getDate() - now.getDate();

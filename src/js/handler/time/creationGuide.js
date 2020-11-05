@@ -75,34 +75,17 @@ function TimeCreationGuide(timeCreation) {
  * Destroy method.
  */
 TimeCreationGuide.prototype._onMouseMoveGuideElement = function(moveGuideElementEventData) {
-    this.clearGuideElement();
+    this._clearGuideElement();
 };
 
 /**
  * Destroy method.
  */
 TimeCreationGuide.prototype.destroy = function() {
-    this.clearGuideElement();
+    this._clearGuideElement();
     this.timeCreation.off(this);
     this.timeCreation = this._styleUnit = this._styleStart =
         this._styleFunc = this.guideElement = this.guideTimeElement = null;
-};
-
-/**
- * Clear guide element.
- */
-TimeCreationGuide.prototype.clearGuideElement = function() {
-    var guideElement = this.guideElement,
-        timeElement = this.guideTimeElement;
-
-    domutil.remove(guideElement);
-
-    reqAnimFrame.requestAnimFrame(function() {
-        guideElement.style.display = 'none';
-        guideElement.style.top = '';
-        guideElement.style.height = '';
-        timeElement.innerHTML = '';
-    });
 };
 
 /**

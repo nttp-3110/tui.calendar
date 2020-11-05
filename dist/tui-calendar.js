@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Wed Nov 04 2020
+ * @version 1.12.11 | Thu Nov 05 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -15918,6 +15918,8 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
      */
     this._disableClick = options.disableClick;
 
+    this._focusInCalendar = true;
+
     this.HOVER_DELAY = (options.timeDelay && options.timeDelay.hover) || 2000;
 
     this.CLICK_DELAY = (options.timeDelay && options.timeDelay.click) || 300;
@@ -15928,13 +15930,14 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
     domevent.on(timeGridView.container, 'click', this._onClick, this);
 
     var self = this,
-        onHoverDelay = util.debounce(function(evt) {
+        onHoverDelay = util.debounce(function (evt) {
             if (util.isFunction(self._onMouseMove)) {
                 self._onMouseMove(evt);
             }
         }, this.HOVER_DELAY);
     domevent.on(timeGridView.container, 'mousemove', onHoverDelay, this);
     domevent.on(timeGridView.container, 'mouseleave', this._onMouseLeave, this);
+    domevent.on(timeGridView.container, 'mouseenter', this._onMouseEnter, this);
 
     if (this._disableDblClick) {
         this.CLICK_DELAY = 0;
@@ -15946,7 +15949,7 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
 /**
  * Destroy method
  */
-TimeCreation.prototype.destroy = function() {
+TimeCreation.prototype.destroy = function () {
     var timeGridView = this.timeGridView;
 
     this.guide.destroy();
@@ -15965,7 +15968,7 @@ TimeCreation.prototype.destroy = function() {
  * @param {HTMLElement} target - The element to check
  * @returns {(boolean|Time)} - return Time view instance when satiate condition.
  */
-TimeCreation.prototype.checkExpectedCondition = function(target) {
+TimeCreation.prototype.checkExpectedCondition = function (target) {
     var cssClass = domutil.getClass(target),
         matches;
     if (cssClass === config.classname('time-date-schedule-block-wrap')) {
@@ -15989,7 +15992,7 @@ TimeCreation.prototype.checkExpectedCondition = function(target) {
  * @param {string} [overrideEventName] - override emitted event name when supplied.
  * @param {function} [revise] - supply function for revise event data before emit.
  */
-TimeCreation.prototype._onDragStart = function(dragStartEventData, overrideEventName, revise) {
+TimeCreation.prototype._onDragStart = function (dragStartEventData, overrideEventName, revise) {
     var target = dragStartEventData.target,
         result = this.checkExpectedCondition(target),
         getScheduleDataFunc,
@@ -16032,7 +16035,7 @@ TimeCreation.prototype._onDragStart = function(dragStartEventData, overrideEvent
  * @param {string} [overrideEventName] - override emitted event name when supplied.
  * @param {function} [revise] - supply function for revise event data before emit.
  */
-TimeCreation.prototype._onDrag = function(dragEventData, overrideEventName, revise) {
+TimeCreation.prototype._onDrag = function (dragEventData, overrideEventName, revise) {
     var getScheduleDataFunc = this._getScheduleDataFunc,
         eventData;
 
@@ -16065,7 +16068,7 @@ TimeCreation.prototype._onDrag = function(dragEventData, overrideEventName, revi
  * @param {object} eventData - event data object from TimeCreation#timeCreationDragend
  * or TimeCreation#timeCreationClick
  */
-TimeCreation.prototype._createSchedule = function(eventData) {
+TimeCreation.prototype._createSchedule = function (eventData) {
     var relatedView = eventData.relatedView,
         createRange = eventData.createRange,
         nearestGridTimeY = eventData.nearestGridTimeY,
@@ -16114,7 +16117,7 @@ TimeCreation.prototype._createSchedule = function(eventData) {
  * @emits TimeCreation#timeCreationDragend
  * @param {object} dragEndEventData - event data from Drag#dragend
  */
-TimeCreation.prototype._onDragEnd = function(dragEndEventData) {
+TimeCreation.prototype._onDragEnd = function (dragEndEventData) {
     var self = this,
         dragStart = this._dragStart;
 
@@ -16160,45 +16163,45 @@ TimeCreation.prototype._onDragEnd = function(dragEndEventData) {
  * @emits TimeCreation#timeCreationHover
  * @param {object} clickEventData - event data from Drag#click.
  */
-TimeCreation.prototype._onMouseMove = function(clickEventData) {
+TimeCreation.prototype._onMouseMove = function (clickEventData) {
     var self = this,
         condResult,
         getScheduleDataFunc,
         eventData,
         customCondResult;
 
-        if (this._showCreationGuideOnHover) {
-    this.dragHandler.off({
-        drag: this._onDrag,
-        dragEnd: this._onDragEnd
-    }, this);
+    if (this._showCreationGuideOnHover && this._focusInCalendar) {
+        this.dragHandler.off({
+            drag: this._onDrag,
+            dragEnd: this._onDragEnd
+        }, this);
 
-    condResult = this.checkExpectedCondition(clickEventData.target);
-    if (!condResult || this._disableHover) {
-        // self.fire('clearCreationGuide', eventData);
+        condResult = this.checkExpectedCondition(clickEventData.target);
+        if (!condResult || this._disableHover) {
+            // self.fire('clearCreationGuide', eventData);
 
-        return;
-    }
-
-    getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
-    eventData = getScheduleDataFunc(clickEventData);
-    if (this._checkExpectedConditionHover) {
-        customCondResult = this._checkExpectedConditionHover(eventData);
-        if (!customCondResult) {
             return;
         }
+
+        getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
+        eventData = getScheduleDataFunc(clickEventData);
+        if (this._checkExpectedConditionHover) {
+            customCondResult = this._checkExpectedConditionHover(eventData);
+            if (!customCondResult) {
+                return;
+            }
+        }
+        eventData.endTime = customCondResult.endTime;
+        eventData.delta = customCondResult.delta;
+        eventData.template = this._creationGuideTemplate;
+        this._requestOnHover = true;
+        if (self._requestOnHover) {
+            self.fire('timeCreationHover', eventData);
+            // self._createSchedule(eventData);
+        }
+        self._requestOnHover = false;
+        this._dragStart = this._getScheduleDataFunc = null;
     }
-    eventData.endTime = customCondResult.endTime;
-    eventData.delta = customCondResult.delta;
-    eventData.template = this._creationGuideTemplate;
-    this._requestOnHover = true;
-    if (self._requestOnHover) {
-        self.fire('timeCreationHover', eventData);
-        // self._createSchedule(eventData);
-    }
-    self._requestOnHover = false;
-    this._dragStart = this._getScheduleDataFunc = null;
-}
 };
 
 /**
@@ -16206,10 +16209,19 @@ TimeCreation.prototype._onMouseMove = function(clickEventData) {
  * @emits TimeCreation#timeCreationHover
  * @param {object} hoveEvenData - event data from Drag#hover.
  */
-TimeCreation.prototype._onMouseLeave = function() { // hoveEvenData
+TimeCreation.prototype._onMouseEnter = function () { // hoveEvenData
+    this._focusInCalendar = true;
+};
+
+/**
+ * Drag#hover event handler
+ * @emits TimeCreation#timeCreationHover
+ * @param {object} hoveEvenData - event data from Drag#hover.
+ */
+TimeCreation.prototype._onMouseLeave = function () { // hoveEvenData
     var self = this;
     var eventData; // condResult, getScheduleDataFunc, eventData;
-
+    this._focusInCalendar = false;
     self.fire('clearCreationGuide', eventData);
 
     this._dragStart = this._getScheduleDataFunc = null;
@@ -16265,7 +16277,7 @@ TimeCreation.prototype._onClick = function (clickEventData) {
  * Dblclick event handler
  * @param {MouseEvent} e - Native MouseEvent
  */
-TimeCreation.prototype._onDblClick = function(e) {
+TimeCreation.prototype._onDblClick = function (e) {
     var condResult, getScheduleDataFunc, eventData;
 
     condResult = this.checkExpectedCondition(e.target);
@@ -16287,7 +16299,7 @@ TimeCreation.prototype._onDblClick = function(e) {
  * Invoke creation click
  * @param {Schedule} schedule - schedule instance
  */
-TimeCreation.prototype.invokeCreationClick = function(schedule) {
+TimeCreation.prototype.invokeCreationClick = function (schedule) {
     console.log('---------< ', schedule);
     var opt = this.timeGridView.options,
         range = datetime.range(
@@ -16298,7 +16310,7 @@ TimeCreation.prototype.invokeCreationClick = function(schedule) {
         targetDate = schedule.start;
     var getScheduleDataFunc, eventData, timeView;
 
-    util.forEach(range, function(date, index) {
+    util.forEach(range, function (date, index) {
         if (datetime.isSameDate(date, targetDate)) {
             timeView = this.timeGridView.children.toArray()[index];
         }
@@ -16410,34 +16422,17 @@ function TimeCreationGuide(timeCreation) {
  * Destroy method.
  */
 TimeCreationGuide.prototype._onMouseMoveGuideElement = function(moveGuideElementEventData) {
-    this.clearGuideElement();
+    this._clearGuideElement();
 };
 
 /**
  * Destroy method.
  */
 TimeCreationGuide.prototype.destroy = function() {
-    this.clearGuideElement();
+    this._clearGuideElement();
     this.timeCreation.off(this);
     this.timeCreation = this._styleUnit = this._styleStart =
         this._styleFunc = this.guideElement = this.guideTimeElement = null;
-};
-
-/**
- * Clear guide element.
- */
-TimeCreationGuide.prototype.clearGuideElement = function() {
-    var guideElement = this.guideElement,
-        timeElement = this.guideTimeElement;
-
-    domutil.remove(guideElement);
-
-    reqAnimFrame.requestAnimFrame(function() {
-        guideElement.style.display = 'none';
-        guideElement.style.top = '';
-        guideElement.style.height = '';
-        timeElement.innerHTML = '';
-    });
 };
 
 /**
@@ -17693,8 +17688,6 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
 
     this._dragStartDirection = null;
 
-    this._dateDragEnd = null;
-
     this._gridStop = null;
 
     this._currentGridY = null;
@@ -17771,6 +17764,11 @@ TimeResize.prototype.checkExpectCondition = function (target) {
     return util.pick(this.timeGridView.children.items, Number(matches[1]));
 };
 
+TimeResize.prototype._convertTimeToGridY = function (time) {
+    var opt = this.timeGridView.options;
+    return (time.getHours() - opt.hourStart + this._getNearestHour(time.getMinutes(), opt.minuteCell, opt.ratioHourGridY));
+}
+
 TimeResize.prototype._checkRangeGridY = function (gridY) {
     var newGridY = gridY;
     newGridY = Math.max(newGridY, this._rangeTime.nearestGridY);
@@ -17780,8 +17778,8 @@ TimeResize.prototype._checkRangeGridY = function (gridY) {
 
 TimeResize.prototype._getDragGridY = function (start, end) {
     var opt = this.timeGridView.options,
-        nearestGridY = start.getHours() - opt.hourStart + this._getNearestHour(start.getMinutes(), opt.minuteCell, opt.ratioHourGridY),
-        nearestGridEndY = end.getHours() - opt.hourStart + this._getNearestHour(end.getMinutes(), opt.minuteCell, opt.ratioHourGridY),
+        nearestGridY = this._convertTimeToGridY(start),
+        nearestGridEndY = this._convertTimeToGridY(end),
         dragGridY;
 
     if (end.getDate() - start.getDate() >= 1) {
@@ -17906,6 +17904,8 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
         scheduleData,
         dragGridRange,
         gridStartY,
+        topDirection = this._dragStartDirection == 'top',
+        bottomDirection = this._dragStartDirection == 'bottom',
         gridEndY;
 
     if (!this._getScheduleDataFunc || !this._dragStart) {
@@ -17926,7 +17926,8 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
 
     if (this._currentGridY != scheduleData.nearestGridY) {
         this._currentGridY = scheduleData.nearestGridY;
-        if (this._dragStartDirection == 'top') {
+        // default validate of calendar
+        if (topDirection) {
             if (scheduleData.nearestGridY >= gridEndY - opt.ratioHourGridY[1]) {
                 var quotient = Math.floor(gridEndY, 10),
                     remainder = Number((gridEndY % 1).toFixed(2)),
@@ -17946,15 +17947,12 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
             } else {
                 this._gridStop = null;
             }
-        } else if (this._dragStartDirection == 'bottom') {
+        } else if (bottomDirection) {
             if (scheduleData.nearestGridY <= gridStartY + opt.ratioHourGridY[1]) {
                 scheduleData.nearestGridY = gridStartY + opt.ratioHourGridY[1];
                 this._gridStop == null && (this._gridStop = scheduleData);
             } else if (scheduleData.nearestGridTimeY.getTime() >= this._rangeTime.nearestGridEndTimeY.getTime()) {
-                var isAllDay = this._rangeTime.nearestGridEndTimeY.getDate() - this._rangeTime.nearestGridTimeY.getDate(), // from 00:00-xx to 00:00-xx+
-                    _hourEnd = isAllDay >= 1 ? (isAllDay * 24) : this._rangeTime.nearestGridEndTimeY.getHours(); // convert 24 hours to get gridY
-
-                scheduleData.nearestGridY = _hourEnd - opt.hourStart + this._getNearestHour(this._rangeTime.nearestGridEndTimeY.getMinutes(), opt.minuteCell, opt.ratioHourGridY);
+                scheduleData.nearestGridY = this._convertTimeToGridY(this._rangeTime.nearestGridEndTimeY);
                 this._gridStop == null && (this._gridStop = scheduleData);
             } else {
                 this._gridStop = null;
@@ -17968,37 +17966,43 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
         scheduleData.nearestGridY = this._checkRangeGridY(scheduleData.nearestGridY);
         this._gridStop != null && (this._gridStop.nearestGridY = this._checkRangeGridY(this._gridStop.nearestGridY));
 
-        if (this._checkExpectedConditionResize) {
+        // custom validate of calendar, if default validate passed
+        if (this._checkExpectedConditionResize && this._gridStop == null) {
             customCondResult = this._checkExpectedConditionResize(scheduleData, dragGridRange, this._dragStartDirection);
             if (typeof customCondResult === 'boolean') {
                 if (customCondResult) {
-                    this._dateDragEnd = null;
-                    this.fire(overrideEventName || 'timeResizeDrag', scheduleData);
+                    this._gridStop = null;
                 } else {
-                    this._dateDragEnd = 0;
+                    this._gridStop = 0;
+                    if (topDirection) {
+                        scheduleData.nearestGridY = dragGridRange.nearestGridY;
+                    } else if (bottomDirection) {
+                        scheduleData.nearestGridY = dragGridRange.nearestGridEndY;
+                    }
                 }
-            } else if (util.isNumber(customCondResult) && this._dateDragEnd == null) {
-                this._dateDragEnd = customCondResult;
+            } else if (util.isNumber(customCondResult)) {
+                this._gridStop = customCondResult;
+                var timeFromInitialStart = new TZDate(dragGridRange.nearestGridTimeY);
+                timeFromInitialStart.addMinutes(this._gridStop);
+                scheduleData.nearestGridY = this._convertTimeToGridY(timeFromInitialStart);
             }
-
-        } else {
-            /**
-             * @event TimeResize#timeResizeDrag
-             * @type {object}
-             * @property {HTMLElement} target - current target in mouse event object.
-             * @property {Time} relatedView - time view instance related with drag start position.
-             * @property {MouseEvent} originEvent - mouse event object.
-             * @property {number} mouseY - mouse Y px mouse event.
-             * @property {number} gridY - grid Y index value related with mouseY value.
-             * @property {number} timeY - milliseconds value of mouseY points.
-             * @property {number} nearestGridY - nearest grid index related with mouseY value.
-             * @property {number} nearestGridTimeY - time value for nearestGridY.
-             * @property {string} targetModelID - The model unique id emitted move schedule.
-             */
-            this.fire(overrideEventName || 'timeResizeDrag', scheduleData);
         }
-    }
 
+        /**
+         * @event TimeResize#timeResizeDrag
+         * @type {object}
+         * @property {HTMLElement} target - current target in mouse event object.
+         * @property {Time} relatedView - time view instance related with drag start position.
+         * @property {MouseEvent} originEvent - mouse event object.
+         * @property {number} mouseY - mouse Y px mouse event.
+         * @property {number} gridY - grid Y index value related with mouseY value.
+         * @property {number} timeY - milliseconds value of mouseY points.
+         * @property {number} nearestGridY - nearest grid index related with mouseY value.
+         * @property {number} nearestGridTimeY - time value for nearestGridY.
+         * @property {string} targetModelID - The model unique id emitted move schedule.
+         */
+        this.fire(overrideEventName || 'timeResizeDrag', scheduleData);
+    }
 };
 
 /**
@@ -18013,6 +18017,8 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
         schedule,
         dragGridRange,
         gridStartTimeY,
+        topDirection = this._dragStartDirection == 'top',
+        bottomDirection = this._dragStartDirection == 'bottom',
         scheduleData;
 
     if (timeCreation) {
@@ -18042,59 +18048,46 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
 
     schedule = this.baseController.schedules.items[scheduleData.targetModelID];
 
-    if (util.isNumber(this._dateDragEnd)) {
-        var newNearestGridTimeY, newNearestGridY;
+    if (util.isNumber(this._gridStop)) {
+        var newNearestGridTimeY;
 
         newNearestGridTimeY = new TZDate(gridStartTimeY);
-        newNearestGridTimeY.addMinutes(this._dateDragEnd);
+        newNearestGridTimeY.addMinutes(this._gridStop);
 
-        newNearestGridY = newNearestGridTimeY.getHours() - opt.hourStart + this._getNearestHour(newNearestGridTimeY.getMinutes(), opt.minuteCell, opt.ratioHourGridY);
-
-        scheduleData.gridY = scheduleData.nearestGridY = newNearestGridY;
+        scheduleData.gridY = scheduleData.nearestGridY = this._convertTimeToGridY(newNearestGridTimeY);
         scheduleData.nearestGridTimeY = newNearestGridTimeY;
 
-        if (this._dateDragEnd == 0) {
-            scheduleData.newTime = null;
-        } else if (this._dragStartDirection == 'top') {
-            scheduleData.newTime = {
-                start: scheduleData.nearestGridTimeY,
-                end: schedule.end
-            };
-        } else if (this._dragStartDirection == 'bottom') {
-            scheduleData.newTime = {
-                start: schedule.start,
-                end: scheduleData.nearestGridTimeY
-            };
-        }
-    } else {
-        if (this._gridStop) {
-            var newNearestGridTimeY,
-                hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
-                minutesChange = Math.round(datetime.minutesFromHours(this._gridStop.nearestGridY % 1)),
-                secondsChange = 0,
-                millisecondsChange = 0;
+    } else if (util.isObject(this._gridStop)) {
+        var newNearestGridTimeY,
+            hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
+            minutesChange = Math.round(datetime.minutesFromHours(this._gridStop.nearestGridY % 1)),
+            secondsChange = 0,
+            millisecondsChange = 0;
 
-            hoursChange = hoursChange == 24 ? 0 : hoursChange;
+        hoursChange = hoursChange == 24 ? 0 : hoursChange;
 
-            newNearestGridTimeY = new TZDate(this._gridStop.nearestGridTimeY);
-            newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
 
-            scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
-            scheduleData.nearestGridTimeY = newNearestGridTimeY;
-        }
+        newNearestGridTimeY = new TZDate(gridStartTimeY);
+        newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
 
-        if (this._dragStartDirection == 'top') {
-            scheduleData.newTime = {
-                start: scheduleData.nearestGridTimeY,
-                end: schedule.end
-            };
-        } else if (this._dragStartDirection == 'bottom') {
-            scheduleData.newTime = {
-                start: schedule.start,
-                end: scheduleData.nearestGridTimeY
-            };
-        }
+        scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
+        scheduleData.nearestGridTimeY = newNearestGridTimeY;
     }
+
+    if (this._gridStop == 0) {
+        scheduleData.newTime = null;
+    } else if (topDirection) {
+        scheduleData.newTime = {
+            start: scheduleData.nearestGridTimeY,
+            end: schedule.end
+        };
+    } else if (bottomDirection) {
+        scheduleData.newTime = {
+            start: schedule.start,
+            end: scheduleData.nearestGridTimeY
+        };
+    }
+
 
     this._updateSchedule(scheduleData);
 
@@ -18120,7 +18113,7 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
         hover: false
     }
 
-    this._getScheduleDataFunc = this._dragStart = this._gridStop = this._dateDragEnd = this._currentGridY = this._rangeTime = this._dragStartDirection = null;
+    this._getScheduleDataFunc = this._dragStart = this._gridStop = this._currentGridY = this._rangeTime = this._dragStartDirection = null;
 };
 
 /**
@@ -26338,14 +26331,14 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
         timeSlots = getHoursLabels(opt, currentHours >= 0, timezoneDifference, styles);
         lastTimeSlot = timeSlots[timeSlots.length - 1];
         
-        timeSlots.push({
-            hour: lastTimeSlot.hour + 1,
-            minutes: lastTimeSlot.minutes,
-            color: lastTimeSlot.color,
-            fontWeight: lastTimeSlot.fontWeight,
-            hidden: lastTimeSlot.hour + 1 == nowHours,
-            isEndTime: true
-        })
+        // timeSlots.push({
+        //     hour: lastTimeSlot.hour + 1,
+        //     minutes: lastTimeSlot.minutes,
+        //     color: lastTimeSlot.color,
+        //     fontWeight: lastTimeSlot.fontWeight,
+        //     hidden: lastTimeSlot.hour + 1 == nowHours,
+        //     isEndTime: true
+        // })
 
         hourmarker.setMinutes(hourmarker.getMinutes() + timezoneDifference);
         dateDifference = hourmarker.getDate() - now.getDate();

@@ -101,6 +101,8 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
      */
     this._disableClick = options.disableClick;
 
+    this._focusInCalendar = true;
+
     this.HOVER_DELAY = (options.timeDelay && options.timeDelay.hover) || 2000;
 
     this.CLICK_DELAY = (options.timeDelay && options.timeDelay.click) || 300;
@@ -111,13 +113,14 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
     domevent.on(timeGridView.container, 'click', this._onClick, this);
 
     var self = this,
-        onHoverDelay = util.debounce(function(evt) {
+        onHoverDelay = util.debounce(function (evt) {
             if (util.isFunction(self._onMouseMove)) {
                 self._onMouseMove(evt);
             }
         }, this.HOVER_DELAY);
     domevent.on(timeGridView.container, 'mousemove', onHoverDelay, this);
     domevent.on(timeGridView.container, 'mouseleave', this._onMouseLeave, this);
+    domevent.on(timeGridView.container, 'mouseenter', this._onMouseEnter, this);
 
     if (this._disableDblClick) {
         this.CLICK_DELAY = 0;
@@ -129,7 +132,7 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
 /**
  * Destroy method
  */
-TimeCreation.prototype.destroy = function() {
+TimeCreation.prototype.destroy = function () {
     var timeGridView = this.timeGridView;
 
     this.guide.destroy();
@@ -148,7 +151,7 @@ TimeCreation.prototype.destroy = function() {
  * @param {HTMLElement} target - The element to check
  * @returns {(boolean|Time)} - return Time view instance when satiate condition.
  */
-TimeCreation.prototype.checkExpectedCondition = function(target) {
+TimeCreation.prototype.checkExpectedCondition = function (target) {
     var cssClass = domutil.getClass(target),
         matches;
     if (cssClass === config.classname('time-date-schedule-block-wrap')) {
@@ -172,7 +175,7 @@ TimeCreation.prototype.checkExpectedCondition = function(target) {
  * @param {string} [overrideEventName] - override emitted event name when supplied.
  * @param {function} [revise] - supply function for revise event data before emit.
  */
-TimeCreation.prototype._onDragStart = function(dragStartEventData, overrideEventName, revise) {
+TimeCreation.prototype._onDragStart = function (dragStartEventData, overrideEventName, revise) {
     var target = dragStartEventData.target,
         result = this.checkExpectedCondition(target),
         getScheduleDataFunc,
@@ -215,7 +218,7 @@ TimeCreation.prototype._onDragStart = function(dragStartEventData, overrideEvent
  * @param {string} [overrideEventName] - override emitted event name when supplied.
  * @param {function} [revise] - supply function for revise event data before emit.
  */
-TimeCreation.prototype._onDrag = function(dragEventData, overrideEventName, revise) {
+TimeCreation.prototype._onDrag = function (dragEventData, overrideEventName, revise) {
     var getScheduleDataFunc = this._getScheduleDataFunc,
         eventData;
 
@@ -248,7 +251,7 @@ TimeCreation.prototype._onDrag = function(dragEventData, overrideEventName, revi
  * @param {object} eventData - event data object from TimeCreation#timeCreationDragend
  * or TimeCreation#timeCreationClick
  */
-TimeCreation.prototype._createSchedule = function(eventData) {
+TimeCreation.prototype._createSchedule = function (eventData) {
     var relatedView = eventData.relatedView,
         createRange = eventData.createRange,
         nearestGridTimeY = eventData.nearestGridTimeY,
@@ -297,7 +300,7 @@ TimeCreation.prototype._createSchedule = function(eventData) {
  * @emits TimeCreation#timeCreationDragend
  * @param {object} dragEndEventData - event data from Drag#dragend
  */
-TimeCreation.prototype._onDragEnd = function(dragEndEventData) {
+TimeCreation.prototype._onDragEnd = function (dragEndEventData) {
     var self = this,
         dragStart = this._dragStart;
 
@@ -343,45 +346,45 @@ TimeCreation.prototype._onDragEnd = function(dragEndEventData) {
  * @emits TimeCreation#timeCreationHover
  * @param {object} clickEventData - event data from Drag#click.
  */
-TimeCreation.prototype._onMouseMove = function(clickEventData) {
+TimeCreation.prototype._onMouseMove = function (clickEventData) {
     var self = this,
         condResult,
         getScheduleDataFunc,
         eventData,
         customCondResult;
 
-        if (this._showCreationGuideOnHover) {
-    this.dragHandler.off({
-        drag: this._onDrag,
-        dragEnd: this._onDragEnd
-    }, this);
+    if (this._showCreationGuideOnHover && this._focusInCalendar) {
+        this.dragHandler.off({
+            drag: this._onDrag,
+            dragEnd: this._onDragEnd
+        }, this);
 
-    condResult = this.checkExpectedCondition(clickEventData.target);
-    if (!condResult || this._disableHover) {
-        // self.fire('clearCreationGuide', eventData);
+        condResult = this.checkExpectedCondition(clickEventData.target);
+        if (!condResult || this._disableHover) {
+            // self.fire('clearCreationGuide', eventData);
 
-        return;
-    }
-
-    getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
-    eventData = getScheduleDataFunc(clickEventData);
-    if (this._checkExpectedConditionHover) {
-        customCondResult = this._checkExpectedConditionHover(eventData);
-        if (!customCondResult) {
             return;
         }
+
+        getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
+        eventData = getScheduleDataFunc(clickEventData);
+        if (this._checkExpectedConditionHover) {
+            customCondResult = this._checkExpectedConditionHover(eventData);
+            if (!customCondResult) {
+                return;
+            }
+        }
+        eventData.endTime = customCondResult.endTime;
+        eventData.delta = customCondResult.delta;
+        eventData.template = this._creationGuideTemplate;
+        this._requestOnHover = true;
+        if (self._requestOnHover) {
+            self.fire('timeCreationHover', eventData);
+            // self._createSchedule(eventData);
+        }
+        self._requestOnHover = false;
+        this._dragStart = this._getScheduleDataFunc = null;
     }
-    eventData.endTime = customCondResult.endTime;
-    eventData.delta = customCondResult.delta;
-    eventData.template = this._creationGuideTemplate;
-    this._requestOnHover = true;
-    if (self._requestOnHover) {
-        self.fire('timeCreationHover', eventData);
-        // self._createSchedule(eventData);
-    }
-    self._requestOnHover = false;
-    this._dragStart = this._getScheduleDataFunc = null;
-}
 };
 
 /**
@@ -389,10 +392,19 @@ TimeCreation.prototype._onMouseMove = function(clickEventData) {
  * @emits TimeCreation#timeCreationHover
  * @param {object} hoveEvenData - event data from Drag#hover.
  */
-TimeCreation.prototype._onMouseLeave = function() { // hoveEvenData
+TimeCreation.prototype._onMouseEnter = function () { // hoveEvenData
+    this._focusInCalendar = true;
+};
+
+/**
+ * Drag#hover event handler
+ * @emits TimeCreation#timeCreationHover
+ * @param {object} hoveEvenData - event data from Drag#hover.
+ */
+TimeCreation.prototype._onMouseLeave = function () { // hoveEvenData
     var self = this;
     var eventData; // condResult, getScheduleDataFunc, eventData;
-
+    this._focusInCalendar = false;
     self.fire('clearCreationGuide', eventData);
 
     this._dragStart = this._getScheduleDataFunc = null;
@@ -448,7 +460,7 @@ TimeCreation.prototype._onClick = function (clickEventData) {
  * Dblclick event handler
  * @param {MouseEvent} e - Native MouseEvent
  */
-TimeCreation.prototype._onDblClick = function(e) {
+TimeCreation.prototype._onDblClick = function (e) {
     var condResult, getScheduleDataFunc, eventData;
 
     condResult = this.checkExpectedCondition(e.target);
@@ -470,7 +482,7 @@ TimeCreation.prototype._onDblClick = function(e) {
  * Invoke creation click
  * @param {Schedule} schedule - schedule instance
  */
-TimeCreation.prototype.invokeCreationClick = function(schedule) {
+TimeCreation.prototype.invokeCreationClick = function (schedule) {
     console.log('---------< ', schedule);
     var opt = this.timeGridView.options,
         range = datetime.range(
@@ -481,7 +493,7 @@ TimeCreation.prototype.invokeCreationClick = function(schedule) {
         targetDate = schedule.start;
     var getScheduleDataFunc, eventData, timeView;
 
-    util.forEach(range, function(date, index) {
+    util.forEach(range, function (date, index) {
         if (datetime.isSameDate(date, targetDate)) {
             timeView = this.timeGridView.children.toArray()[index];
         }
