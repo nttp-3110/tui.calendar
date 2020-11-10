@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Thu Nov 05 2020
+ * @version 1.12.11 | Tue Nov 10 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -9672,6 +9672,10 @@ Calendar.prototype.setCalendarColor = function(calendarId, option, silent) {
  * Custom Events
  **********/
 
+Calendar.prototype._onHover = function(clickScheduleData) {
+    console.log();
+};
+
 /**
  * A bridge-based event handler for connecting a click handler to a user click event handler for each view
  * @fires Calendar#clickSchedule
@@ -9890,7 +9894,11 @@ Calendar.prototype._toggleViewSchedule = function(isAttach, view) {
     var self = this,
         handler = view.handler,
         method = isAttach ? 'on' : 'off';
-
+        
+    util.forEach(handler.hover, function(clickHandler) {
+        clickHandler[method]('hoverSchedule', self._onHover, self);
+    });
+    
     util.forEach(handler.click, function(clickHandler) {
         clickHandler[method]('clickSchedule', self._onClick, self);
     });
@@ -10665,6 +10673,7 @@ var DayGridClick = __webpack_require__(/*! ../handler/daygrid/click */ "./src/js
 var DayGridCreation = __webpack_require__(/*! ../handler/daygrid/creation */ "./src/js/handler/daygrid/creation.js");
 var DayGridMove = __webpack_require__(/*! ../handler/daygrid/move */ "./src/js/handler/daygrid/move.js");
 var DayGridResize = __webpack_require__(/*! ../handler/daygrid/resize */ "./src/js/handler/daygrid/resize.js");
+// var TimeHover = require('../handler/time/hover');
 var TimeClick = __webpack_require__(/*! ../handler/time/click */ "./src/js/handler/time/click.js");
 var TimeCreation = __webpack_require__(/*! ../handler/time/creation */ "./src/js/handler/time/creation.js");
 var TimeMove = __webpack_require__(/*! ../handler/time/move */ "./src/js/handler/time/move.js");
@@ -10681,6 +10690,7 @@ var DAYGRID_HANDLDERS = {
     'mouseleave': TimeMouseLeave
 };
 var TIMEGRID_HANDLERS = {
+    // 'hover': TimeHover,
     'click': TimeClick,
     'creation': TimeCreation,
     'move': TimeMove,
@@ -10785,6 +10795,7 @@ module.exports = function(baseController, layoutContainer, dragHandler, options,
 
     weekView = new Week(null, options.week, layoutContainer, panels, viewName);
     weekView.handler = {
+        hover: {},
         click: {},
         dayname: {},
         creation: {},
@@ -10850,7 +10861,7 @@ module.exports = function(baseController, layoutContainer, dragHandler, options,
             view = new TimeGrid(name, options, vLayout.getPanelByName(name).container);
             weekView.addChild(view);
             util.forEach(handlers, function(type) {
-                if (!options.isReadOnly || type === 'click' || type === 'mousemove' || type === 'mouseleave') {
+                if (!options.isReadOnly || type === 'hover' || type === 'click' || type === 'mousemove' || type === 'mouseleave') {
                     weekView.handler[type][name] =
                         new TIMEGRID_HANDLERS[type](dragHandler, view, baseController, options);
                 }
@@ -17926,49 +17937,14 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
 
     if (this._currentGridY != scheduleData.nearestGridY) {
         this._currentGridY = scheduleData.nearestGridY;
-        // default validate of calendar
-        if (topDirection) {
-            if (scheduleData.nearestGridY >= gridEndY - opt.ratioHourGridY[1]) {
-                var quotient = Math.floor(gridEndY, 10),
-                    remainder = Number((gridEndY % 1).toFixed(2)),
-                    nearestRemainder = this._getNearestGridY(remainder, opt.ratioHourGridY, 'top');
-
-                if (scheduleData.nearestGridY >= opt.hourEnd - opt.ratioHourGridY[1]) {
-                    scheduleData.nearestGridY = quotient + nearestRemainder;
-                } else if (opt.ratioHourGridY.indexOf(remainder) < 0) {
-                    scheduleData.nearestGridY = quotient + nearestRemainder - opt.ratioHourGridY[1];
-                } else {
-                    scheduleData.nearestGridY = gridEndY - opt.ratioHourGridY[1];
-                }
-                this._gridStop == null && (this._gridStop = scheduleData);
-            } else if (scheduleData.nearestGridTimeY.getTime() <= this._rangeTime.nearestGridTimeY.getTime()) {
-                scheduleData.nearestGridY = 0;
-                this._gridStop == null && (this._gridStop = scheduleData);
-            } else {
-                this._gridStop = null;
-            }
-        } else if (bottomDirection) {
-            if (scheduleData.nearestGridY <= gridStartY + opt.ratioHourGridY[1]) {
-                scheduleData.nearestGridY = gridStartY + opt.ratioHourGridY[1];
-                this._gridStop == null && (this._gridStop = scheduleData);
-            } else if (scheduleData.nearestGridTimeY.getTime() >= this._rangeTime.nearestGridEndTimeY.getTime()) {
-                scheduleData.nearestGridY = this._convertTimeToGridY(this._rangeTime.nearestGridEndTimeY);
-                this._gridStop == null && (this._gridStop = scheduleData);
-            } else {
-                this._gridStop = null;
-            }
-        }
 
         if (revise) {
             revise(scheduleData);
         }
 
-        scheduleData.nearestGridY = this._checkRangeGridY(scheduleData.nearestGridY);
-        this._gridStop != null && (this._gridStop.nearestGridY = this._checkRangeGridY(this._gridStop.nearestGridY));
-
-        // custom validate of calendar, if default validate passed
-        if (this._checkExpectedConditionResize && this._gridStop == null) {
-            customCondResult = this._checkExpectedConditionResize(scheduleData, dragGridRange, this._dragStartDirection);
+        // custom validate of calendar
+        if (this._checkExpectedConditionResize) {
+            customCondResult = this._checkExpectedConditionResize(scheduleData, this._dragStartDirection, dragGridRange, this._rangeTime);
             if (typeof customCondResult === 'boolean') {
                 if (customCondResult) {
                     this._gridStop = null;
@@ -18057,22 +18033,23 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
         scheduleData.gridY = scheduleData.nearestGridY = this._convertTimeToGridY(newNearestGridTimeY);
         scheduleData.nearestGridTimeY = newNearestGridTimeY;
 
-    } else if (util.isObject(this._gridStop)) {
-        var newNearestGridTimeY,
-            hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
-            minutesChange = Math.round(datetime.minutesFromHours(this._gridStop.nearestGridY % 1)),
-            secondsChange = 0,
-            millisecondsChange = 0;
-
-        hoursChange = hoursChange == 24 ? 0 : hoursChange;
-
-
-        newNearestGridTimeY = new TZDate(gridStartTimeY);
-        newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
-
-        scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
-        scheduleData.nearestGridTimeY = newNearestGridTimeY;
     }
+    // else if (util.isObject(this._gridStop)) {
+    //     var newNearestGridTimeY,
+    //         hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
+    //         minutesChange = Math.round(datetime.minutesFromHours(this._gridStop.nearestGridY % 1)),
+    //         secondsChange = 0,
+    //         millisecondsChange = 0;
+
+    //     hoursChange = hoursChange == 24 ? 0 : hoursChange;
+
+
+    //     newNearestGridTimeY = new TZDate(gridStartTimeY);
+    //     newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
+
+    //     scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
+    //     scheduleData.nearestGridTimeY = newNearestGridTimeY;
+    // }
 
     if (this._gridStop == 0) {
         scheduleData.newTime = null;
@@ -18180,7 +18157,6 @@ timeCore.mixin(TimeResize);
 util.CustomEvents.mixin(TimeResize);
 
 module.exports = TimeResize;
-
 
 /***/ }),
 

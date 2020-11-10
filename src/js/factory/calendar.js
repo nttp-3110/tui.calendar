@@ -1262,6 +1262,10 @@ Calendar.prototype.setCalendarColor = function(calendarId, option, silent) {
  * Custom Events
  **********/
 
+Calendar.prototype._onHover = function(clickScheduleData) {
+    console.log();
+};
+
 /**
  * A bridge-based event handler for connecting a click handler to a user click event handler for each view
  * @fires Calendar#clickSchedule
@@ -1480,7 +1484,11 @@ Calendar.prototype._toggleViewSchedule = function(isAttach, view) {
     var self = this,
         handler = view.handler,
         method = isAttach ? 'on' : 'off';
-
+        
+    util.forEach(handler.hover, function(clickHandler) {
+        clickHandler[method]('hoverSchedule', self._onHover, self);
+    });
+    
     util.forEach(handler.click, function(clickHandler) {
         clickHandler[method]('clickSchedule', self._onClick, self);
     });

@@ -291,49 +291,14 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
 
     if (this._currentGridY != scheduleData.nearestGridY) {
         this._currentGridY = scheduleData.nearestGridY;
-        // default validate of calendar
-        if (topDirection) {
-            if (scheduleData.nearestGridY >= gridEndY - opt.ratioHourGridY[1]) {
-                var quotient = Math.floor(gridEndY, 10),
-                    remainder = Number((gridEndY % 1).toFixed(2)),
-                    nearestRemainder = this._getNearestGridY(remainder, opt.ratioHourGridY, 'top');
-
-                if (scheduleData.nearestGridY >= opt.hourEnd - opt.ratioHourGridY[1]) {
-                    scheduleData.nearestGridY = quotient + nearestRemainder;
-                } else if (opt.ratioHourGridY.indexOf(remainder) < 0) {
-                    scheduleData.nearestGridY = quotient + nearestRemainder - opt.ratioHourGridY[1];
-                } else {
-                    scheduleData.nearestGridY = gridEndY - opt.ratioHourGridY[1];
-                }
-                this._gridStop == null && (this._gridStop = scheduleData);
-            } else if (scheduleData.nearestGridTimeY.getTime() <= this._rangeTime.nearestGridTimeY.getTime()) {
-                scheduleData.nearestGridY = 0;
-                this._gridStop == null && (this._gridStop = scheduleData);
-            } else {
-                this._gridStop = null;
-            }
-        } else if (bottomDirection) {
-            if (scheduleData.nearestGridY <= gridStartY + opt.ratioHourGridY[1]) {
-                scheduleData.nearestGridY = gridStartY + opt.ratioHourGridY[1];
-                this._gridStop == null && (this._gridStop = scheduleData);
-            } else if (scheduleData.nearestGridTimeY.getTime() >= this._rangeTime.nearestGridEndTimeY.getTime()) {
-                scheduleData.nearestGridY = this._convertTimeToGridY(this._rangeTime.nearestGridEndTimeY);
-                this._gridStop == null && (this._gridStop = scheduleData);
-            } else {
-                this._gridStop = null;
-            }
-        }
 
         if (revise) {
             revise(scheduleData);
         }
 
-        scheduleData.nearestGridY = this._checkRangeGridY(scheduleData.nearestGridY);
-        this._gridStop != null && (this._gridStop.nearestGridY = this._checkRangeGridY(this._gridStop.nearestGridY));
-
-        // custom validate of calendar, if default validate passed
-        if (this._checkExpectedConditionResize && this._gridStop == null) {
-            customCondResult = this._checkExpectedConditionResize(scheduleData, dragGridRange, this._dragStartDirection);
+        // custom validate of calendar
+        if (this._checkExpectedConditionResize) {
+            customCondResult = this._checkExpectedConditionResize(scheduleData, this._dragStartDirection, dragGridRange, this._rangeTime);
             if (typeof customCondResult === 'boolean') {
                 if (customCondResult) {
                     this._gridStop = null;
@@ -422,22 +387,23 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
         scheduleData.gridY = scheduleData.nearestGridY = this._convertTimeToGridY(newNearestGridTimeY);
         scheduleData.nearestGridTimeY = newNearestGridTimeY;
 
-    } else if (util.isObject(this._gridStop)) {
-        var newNearestGridTimeY,
-            hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
-            minutesChange = Math.round(datetime.minutesFromHours(this._gridStop.nearestGridY % 1)),
-            secondsChange = 0,
-            millisecondsChange = 0;
-
-        hoursChange = hoursChange == 24 ? 0 : hoursChange;
-
-
-        newNearestGridTimeY = new TZDate(gridStartTimeY);
-        newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
-
-        scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
-        scheduleData.nearestGridTimeY = newNearestGridTimeY;
     }
+    // else if (util.isObject(this._gridStop)) {
+    //     var newNearestGridTimeY,
+    //         hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
+    //         minutesChange = Math.round(datetime.minutesFromHours(this._gridStop.nearestGridY % 1)),
+    //         secondsChange = 0,
+    //         millisecondsChange = 0;
+
+    //     hoursChange = hoursChange == 24 ? 0 : hoursChange;
+
+
+    //     newNearestGridTimeY = new TZDate(gridStartTimeY);
+    //     newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
+
+    //     scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
+    //     scheduleData.nearestGridTimeY = newNearestGridTimeY;
+    // }
 
     if (this._gridStop == 0) {
         scheduleData.newTime = null;
