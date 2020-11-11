@@ -190,13 +190,13 @@ TimeResizeGuide.prototype._onDrag = function (dragEventData) {
         } else {
             maxTop = gridRange.nearestGridEndY - viewOptions.ratioHourGridY[1];
         }
-
+        
         guideTop = dragEventData.nearestGridY;
         guideTop = Math.max(guideTop, minTop);
         guideTop = Math.min(guideTop, maxTop);
 
         top = ratio(hourLength, viewHeight, guideTop);
-        height = this._startHeightPixel + ratio(hourLength, viewHeight, this._startGridY - dragEventData.nearestGridY);
+        height = ratio(hourLength, viewHeight, gridRange.nearestGridEndY - guideTop);
         this._refreshGuideElement(top, height);
     } else if (domutil.hasClass(this._dragStart.target, config.classname('time-bottom-resize-handle'))) {
         guideTop = parseFloat(guideElement.style.top);
