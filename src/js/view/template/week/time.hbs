@@ -1,24 +1,29 @@
 <div class="{{CSS_PREFIX}}time-date-schedule-block-wrap" style="margin-right: {{styles.marginRight}};">
-{{#if disabledGrid.isDisabled}}
+    {{#if disabledGrid.isDisabled}}
     <div class="{{CSS_PREFIX}}time-date-schedule-block-disable"
         style="top: {{multiply @root.styles.oneHourHeight disabledGrid.hourDisabled}}px; height: calc(100% - {{multiply @root.styles.oneHourHeight disabledGrid.hourDisabled}}px)">
         {{#if disabledGrid.elementDisabled}}
         {{{disabledGrid.elementDisabled}}}
         {{/if}}
     </div>
-{{/if}}
-{{#each matrices}}
+    {{/if}}
+    {{#each matrices}}
     {{#each this}}
-        {{#each this}}
-        {{#if this ~}}
-        <div class="{{CSS_PREFIX}}time-date-schedule-block {{#if model.isPending}} {{CSS_PREFIX}}time-date-schedule-block-pending{{/if}} {{model.dueDateClass}}" data-id="{{stamp model}}"
-            style="{{time-scheduleBlock this}};
+    {{#each this}}
+    {{#if this ~}}
+    <div class="{{CSS_PREFIX}}time-date-schedule-block {{#if model.isPending}} {{CSS_PREFIX}}time-date-schedule-block-pending{{/if}} {{model.dueDateClass}}"
+        data-id="{{stamp model}}" style="{{time-scheduleBlock this}};
                 {{#fi left '!==' 0}}
                     padding-left: {{@root.styles.paddingLeft}};
                 {{/fi}}
             ">
-            <div data-schedule-id="{{model.id}}" data-calendar-id="{{model.calendarId}}" class="{{CSS_PREFIX}}time-schedule {{#if model.isFocused}}{{CSS_PREFIX}}time-schedule-focused {{/if}}"
-                style="
+        {{#if model.raw.resizable}}
+        <div class="{{CSS_PREFIX}}time-top-resize-handle handle-x" style="margin-left: {{@root.styles.paddingLeft}};">
+            &nbsp;</div>
+        {{/if}}
+        <div data-schedule-id="{{model.id}}" data-calendar-id="{{model.calendarId}}"
+            class="{{CSS_PREFIX}}time-schedule {{#if model.isFocused}}{{CSS_PREFIX}}time-schedule-focused {{/if}}"
+            style="
                 {{#unless croppedEnd}}
                     border-bottom-left-radius: {{@root.styles.borderRadius}};
                     border-bottom-right-radius: {{@root.styles.borderRadius}};
@@ -32,10 +37,9 @@
                 {{else}}
                     color:{{model.color}}; background-color:{{model.bgColor}}; border-color:{{model.borderColor}};
                 {{/if}}
-                 {{model.customStyle}}"
-            >
+                 {{model.customStyle}}">
             {{#if hasGoingDuration}}
-                <div class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-travel-time" style="height: {{goingDurationHeight}}px;
+            <div class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-travel-time" style="height: {{goingDurationHeight}}px;
                 {{#if model.isFocused}}
                     border-color:{{model.color}};
                 {{else}}
@@ -43,28 +47,32 @@
                 {{/if}}
                 border-bottom: 1px dashed {{travelBorderColor}};">{{{goingDuration-tmpl model}}}</div>
             {{/if}}
-                <div class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-time" style="height: {{modelDurationHeight}}px;
+            <div class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-time" style="height: {{modelDurationHeight}}px;
                 {{#if model.isFocused}}
                     border-color:{{model.color}};
                 {{else}}
                     border-color:{{model.borderColor}};
                 {{/if}}
                 {{#if hasComingDuration}}border-bottom: 1px dashed {{travelBorderColor}};{{/if}}">
-                    {{{time-tmpl model}}}
-                </div>
+                {{{time-tmpl model}}}
+            </div>
             {{#if hasComingDuration}}
-                <div class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-travel-time" style="height: {{comingDurationHeight}}px;
+            <div class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-travel-time" style="height: {{comingDurationHeight}}px;
                 {{#if model.isFocused}}
                     border-color:{{model.color}};
                 {{else}}
                     border-color:{{model.borderColor}};
                 {{/if}};">{{{comingDuration-tmpl model}}}</div>
             {{/if}}
-            </div>
-            {{#unless (or croppedEnd @root.isReadOnly model.isReadOnly)}}<div class="{{CSS_PREFIX}}time-resize-handle handle-x" style="margin-left: {{@root.styles.paddingLeft}};">&nbsp;</div>{{/unless}}
         </div>
-        {{/if ~}}
-        {{/each}}
+        {{#if model.raw.resizable}}
+        <div class="{{CSS_PREFIX}}time-bottom-resize-handle handle-x"
+            style="margin-left: {{@root.styles.paddingLeft}};">
+            &nbsp;</div>
+        {{/if}}
+    </div>
+    {{/if ~}}
     {{/each}}
-{{/each}}
+    {{/each}}
+    {{/each}}
 </div>

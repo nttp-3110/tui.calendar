@@ -4,6 +4,12 @@
         style="{{#if hidden}}display:none;{{/if}}position: absolute; top: 0; width: {{width}}%; left: {{left}}%; border-right: {{@root.styles.leftBorderRight}}; background-color: {{backgroundColor}};">
         {{#if isPrimary}}
         {{#each timeSlots ~}}
+        {{#if isEndTime}}
+        <div class="{{CSS_PREFIX}}timegrid-hour" style="height: 0; color: {{color}}; font-weight: {{fontWeight}};">
+            <span
+                style="{{#if hidden}}display:none{{/if}}; height: 0; color: {{color}}; font-weight: {{fontWeight}};">{{{timegridDisplayPrimaryTime-tmpl this}}}</span>
+        </div>
+        {{else}}
         <div class="{{CSS_PREFIX}}timegrid-hour"
             style="height: {{@root.styles.oneHourHeight}}; color: {{color}}; font-weight: {{fontWeight}};">
             <span
@@ -11,6 +17,7 @@
             <span
                 style="margin-top: {{@root.styles.halfHourHeight}}; height: {{@root.styles.halfHourHeight}}; color: {{color}}; font-weight: {{fontWeight}};">{{{timegridDisplayPrimaryTime-tmpl this true}}}</span>
         </div>
+        {{/if}}
         {{/each ~}}
         {{#if @root.showHourMarker}}
         {{#fi @root.positionHourMarker '===' 'all'}}

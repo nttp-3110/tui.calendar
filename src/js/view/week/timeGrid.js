@@ -150,7 +150,9 @@ function TimeGrid(name, options, panelElement) {
             todayMarker: true,
             positionHourMarker: 'all',
             onlyShowInRange: false
-        }
+        },
+        minuteCell: options.minuteCell || 15,
+        ratioHourGridY: []
     }, options.week);
 
     if (options.timeUnderground) {
@@ -184,6 +186,23 @@ function TimeGrid(name, options, panelElement) {
             }
         });
         this.options.timeUnderground = timeUnderground;
+    }
+
+    if (util.isFunction(options.showHourEndOfDay)) {
+        this.options.showHourEndOfDay = options.showHourEndOfDay(this.options.hourStart, this.options.hourEnd);
+    }
+
+    if (options.ratioHourGridY) {
+        this.options.ratioHourGridY = options.ratioHourGridY;
+    } else {
+        var unitRatio = 60 / options.minuteCell;
+        var unitInAHour = 1 / unitRatio;
+        var ratioHourGridY = [0];
+        for (var i = 1; i < Array(unitRatio).length; i++) {
+            ratioHourGridY.push(unitInAHour * i);
+        }
+        ratioHourGridY.push(1);
+        this.options.ratioHourGridY = ratioHourGridY;
     }
 
     if (options.disabledGrid) {
@@ -360,13 +379,28 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
     var backgroundColor = styles.displayTimezoneLabelBackgroundColor;
 
     util.forEach(timezones, function(timezone, index) {
-        var hourmarker = new TZDate(now);
-        var timezoneDifference;
-        var timeSlots;
-        var dateDifference;
-
+        var hourmarker = new TZDate(now),
+            timezoneDifference,
+            timeSlots,
+            dateDifference,
+            lastTimeSlot,
+            shiftByOffset = parseInt(timezone.timezoneOffset / SIXTY_MINUTES, 10),
+            nowHours = common.shiftHours(now.getHours(), shiftByOffset) % 24;
+            
         timezoneDifference = timezone.timezoneOffset + primaryOffset;
         timeSlots = getHoursLabels(opt, currentHours >= 0, timezoneDifference, styles);
+        lastTimeSlot = timeSlots[timeSlots.length - 1];
+
+        if (opt.showHourEndOfDay) {
+            timeSlots.push({
+                hour: lastTimeSlot.hour + 1,
+                minutes: lastTimeSlot.minutes,
+                color: lastTimeSlot.color,
+                fontWeight: lastTimeSlot.fontWeight,
+                hidden: lastTimeSlot.hour + 1 == nowHours,
+                isEndTime: true
+            });            
+        }
 
         hourmarker.setMinutes(hourmarker.getMinutes() + timezoneDifference);
         dateDifference = hourmarker.getDate() - now.getDate();
@@ -446,8 +480,8 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
     util.forEach(viewModels, function(schedules, ymd) {
         var isDueDate = Number(ymd) == Number(datetime.format(new TZDate(options.disabledGrid.hourDisabled), 'YYYYMMDD'));
         isToday = ymd === today;
-        isDisableGrid = options.disabledGrid.hourDisabled ? Number(ymd) >= Number(datetime.format(new TZDate(options.disabledGrid.hourDisabled), 'YYYYMMDD')) : false;
-        ratioByHourDisabled = 0;
+        isDisableGrid = options.disabledGrid.hourDisabled && Number(ymd) >= Number(datetime.format(new TZDate(options.disabledGrid.hourDisabled), 'YYYYMMDD'));
+        ratioByHourDisabled = 0;    
         elementDisabled = null;
         if (isDueDate) {
             ratioByHourDisabled = (hourDisabled - options.hourStart) + (minuteDisabled / 60);
@@ -455,29 +489,27 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
             if (hourDisabled < options.hourStart) {
                 ratioByHourDisabled = 0;
                 elementDisabled = null;
-            } else if (hourDisabled > options.hourEnd) {
+            } else if (hourDisabled >= options.hourEnd) {
                 ratioByHourDisabled = options.hourEnd - options.hourStart;
                 elementDisabled = null;
             }
         }
-        childOption = {
+
+        var optionsClone = Object.assign({}, options);
+
+        childOption = util.extend(optionsClone, {
             index: i,
             left: grids[i] ? grids[i].left : 0,
             width: grids[i] ? grids[i].width : 0,
             ymd: ymd,
             isToday: isToday,
-            isPending: options.isPending,
-            isFocused: options.isFocused,
-            isReadOnly: options.isReadOnly,
-            hourStart: options.hourStart,
-            hourEnd: options.hourEnd,
             disabledGrid: {
                 isDisabled: isDisableGrid,
                 hourDisabled: Number(ratioByHourDisabled.toFixed(2)),
                 elementDisabled: elementDisabled
             }
-        };
-        // console.log(childOption);
+        });
+
         child = new Time(
             childOption,
             domutil.appendHTMLElement('div', container, config.classname('time-date')),

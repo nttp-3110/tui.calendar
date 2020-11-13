@@ -203,8 +203,20 @@ TZDate.prototype.addDate = function(day) {
     return this;
 };
 
+TZDate.prototype.addHours = function(hours) {
+    this.setHours(this.getHours() + hours);
+
+    return this;
+};
+
 TZDate.prototype.addMinutes = function(minutes) {
     this.setMinutes(this.getMinutes() + minutes);
+
+    return this;
+};
+
+TZDate.prototype.addSeconds = function(seconds) {
+    this.setSeconds(this.getSeconds() + seconds);
 
     return this;
 };

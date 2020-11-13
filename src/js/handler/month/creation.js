@@ -15,8 +15,6 @@ var getMousePosDate = require('./core');
 var Guide = require('./creationGuide');
 var TZDate = require('../../common/timezone').Date;
 
-var CLICK_DELAY = 300;
-
 /**
  * @constructor
  * @param {Drag} dragHandler - Drag handler instance.
@@ -71,11 +69,13 @@ function MonthCreation(dragHandler, monthView, baseController, options) {
      */
     this._disableClick = options.disableClick;
 
+    this.CLICK_DELAY = options.timeDelay && options.timeDelay.click || 300;
+
     dragHandler.on('dragStart', this._onDragStart, this);
     dragHandler.on('click', this._onClick, this);
 
     if (this._disableDblClick) {
-        CLICK_DELAY = 0;
+        this.CLICK_DELAY = 0;
     } else {
         domevent.on(monthView.container, 'dblclick', this._onDblClick, this);
     }
@@ -289,7 +289,7 @@ MonthCreation.prototype._onClick = function(e) {
             });
         }
         self._requestOnClick = false;
-    }, CLICK_DELAY);
+    }, this.CLICK_DELAY);
 };
 
 /**
