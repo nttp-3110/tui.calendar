@@ -367,13 +367,14 @@ var helpers = {
     },
 
     'timegridDisplayPrimaryTime-tmpl': function(time, isHaftTime) {
-        var hour = time.hour == 24 ? 0 : time.hour;
+        var hour = time.hour == 0 || time.hour == 24 ? 12 : time.hour;
         var minute = isHaftTime === true ? '30' : '00';
-        var meridiem = hour >= 12 ? 'pm' : 'am';
+        var meridiem = time.hour >= 12 && time.hour < 24 ? 'pm' : 'am';
+        
         if (hour > 12) {
             hour = hour - 12;
         }
-
+        
         return hour + ':' + minute + ' ' + meridiem;
     },
 

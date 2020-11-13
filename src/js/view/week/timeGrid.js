@@ -155,6 +155,10 @@ function TimeGrid(name, options, panelElement) {
         ratioHourGridY: []
     }, options.week);
 
+    if (util.isFunction(options.showHourEndOfDay)) {
+        this.options.showHourEndOfDay = options.showHourEndOfDay(this.options.hourStart, this.options.hourEnd);
+    }
+
     if (options.ratioHourGridY) {
         this.options.ratioHourGridY = options.ratioHourGridY;
     } else {
@@ -353,15 +357,17 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
         timezoneDifference = timezone.timezoneOffset + primaryOffset;
         timeSlots = getHoursLabels(opt, currentHours >= 0, timezoneDifference, styles);
         lastTimeSlot = timeSlots[timeSlots.length - 1];
-        
-        // timeSlots.push({
-        //     hour: lastTimeSlot.hour + 1,
-        //     minutes: lastTimeSlot.minutes,
-        //     color: lastTimeSlot.color,
-        //     fontWeight: lastTimeSlot.fontWeight,
-        //     hidden: lastTimeSlot.hour + 1 == nowHours,
-        //     isEndTime: true
-        // })
+
+        if (opt.showHourEndOfDay) {
+            timeSlots.push({
+                hour: lastTimeSlot.hour + 1,
+                minutes: lastTimeSlot.minutes,
+                color: lastTimeSlot.color,
+                fontWeight: lastTimeSlot.fontWeight,
+                hidden: lastTimeSlot.hour + 1 == nowHours,
+                isEndTime: true
+            });            
+        }
 
         hourmarker.setMinutes(hourmarker.getMinutes() + timezoneDifference);
         dateDifference = hourmarker.getDate() - now.getDate();

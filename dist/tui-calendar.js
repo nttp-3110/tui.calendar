@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Wed Nov 11 2020
+ * @version 1.12.11 | Fri Nov 13 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -21813,13 +21813,14 @@ var helpers = {
     },
 
     'timegridDisplayPrimaryTime-tmpl': function(time, isHaftTime) {
-        var hour = time.hour == 24 ? 0 : time.hour;
+        var hour = time.hour == 0 || time.hour == 24 ? 12 : time.hour;
         var minute = isHaftTime === true ? '30' : '00';
-        var meridiem = hour >= 12 ? 'pm' : 'am';
+        var meridiem = time.hour >= 12 && time.hour < 24 ? 'pm' : 'am';
+        
         if (hour > 12) {
             hour = hour - 12;
         }
-
+        
         return hour + ':' + minute + ' ' + meridiem;
     },
 
@@ -26108,6 +26109,10 @@ function TimeGrid(name, options, panelElement) {
         ratioHourGridY: []
     }, options.week);
 
+    if (util.isFunction(options.showHourEndOfDay)) {
+        this.options.showHourEndOfDay = options.showHourEndOfDay(this.options.hourStart, this.options.hourEnd);
+    }
+
     if (options.ratioHourGridY) {
         this.options.ratioHourGridY = options.ratioHourGridY;
     } else {
@@ -26306,15 +26311,17 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
         timezoneDifference = timezone.timezoneOffset + primaryOffset;
         timeSlots = getHoursLabels(opt, currentHours >= 0, timezoneDifference, styles);
         lastTimeSlot = timeSlots[timeSlots.length - 1];
-        
-        // timeSlots.push({
-        //     hour: lastTimeSlot.hour + 1,
-        //     minutes: lastTimeSlot.minutes,
-        //     color: lastTimeSlot.color,
-        //     fontWeight: lastTimeSlot.fontWeight,
-        //     hidden: lastTimeSlot.hour + 1 == nowHours,
-        //     isEndTime: true
-        // })
+
+        if (opt.showHourEndOfDay) {
+            timeSlots.push({
+                hour: lastTimeSlot.hour + 1,
+                minutes: lastTimeSlot.minutes,
+                color: lastTimeSlot.color,
+                fontWeight: lastTimeSlot.fontWeight,
+                hidden: lastTimeSlot.hour + 1 == nowHours,
+                isEndTime: true
+            });            
+        }
 
         hourmarker.setMinutes(hourmarker.getMinutes() + timezoneDifference);
         dateDifference = hourmarker.getDate() - now.getDate();
