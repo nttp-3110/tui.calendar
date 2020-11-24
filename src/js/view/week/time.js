@@ -8,6 +8,7 @@ var util = require('tui-code-snippet');
 var config = require('../../config');
 var datetime = require('../../common/datetime');
 var domutil = require('../../common/domutil');
+var domevent = require('../../common/domevent');
 var View = require('../view');
 var timeTmpl = require('../template/week/time.hbs');
 var timeBackgroundTmpl = require('../template/week/timeBackground.hbs');
@@ -28,8 +29,10 @@ var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
  * @param {HTMLElement} container Element to use container for this view.
  * @param {Theme} theme - theme instance
  */
-function Time(options, container, theme) {
+function Time(options, container, theme, baseController) {
+
     View.call(this, container);
+
     this.options = util.extend({
         index: 0,
         width: 0,
@@ -42,6 +45,9 @@ function Time(options, container, theme) {
         minHeight: 18.5,
         isReadOnly: false
     }, options);
+
+    this.baseController = baseController;
+
     this.timeTmpl = timeTmpl;
     this.timeBackgroundTmpl = timeBackgroundTmpl;
 
@@ -263,12 +269,29 @@ Time.prototype.getDate = function() {
  * @param {number} containerHeight - container's height
  */
 Time.prototype.render = function(ymd, matrices, containerHeight) {
+    var self = this;
     this._getBaseViewModel(ymd, matrices, containerHeight);
     this.container.innerHTML = this.timeTmpl({
         matrices: matrices,
         styles: this._getStyles(this.theme),
         isReadOnly: this.options.isReadOnly,
         disabledGrid: this.options.disabledGrid
+    });
+
+    util.forEach(matrices, function(item, index) {
+        var element = item[0][0];
+        var eleId = 'schedule-content-' + element.model.id;
+        var domEle = document.getElementById(eleId);
+        if (self.options.onMouseEnterScheduleItem) {
+            domevent.on(domEle, 'mouseenter', function(evt) { 
+                self.options.onMouseEnterScheduleItem(evt, domEle, element.model);
+            }, self);
+        }
+        if (self.options.onMouseLeaveScheduleItem) {
+            domevent.on(domEle, 'mouseleave', function(evt) { 
+                self.options.onMouseLeaveScheduleItem(evt, domEle, element.model);
+            }, self);
+        }
     });
 };
 

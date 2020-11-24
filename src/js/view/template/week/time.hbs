@@ -17,10 +17,6 @@
                     padding-left: {{@root.styles.paddingLeft}};
                 {{/fi}}
             ">
-        {{#if model.raw.resizable}}
-        <div class="{{CSS_PREFIX}}time-top-resize-handle handle-x" style="margin-left: {{@root.styles.paddingLeft}};">
-            &nbsp;</div>
-        {{/if}}
         <div data-schedule-id="{{model.id}}" data-calendar-id="{{model.calendarId}}"
             class="{{CSS_PREFIX}}time-schedule {{#if model.isFocused}}{{CSS_PREFIX}}time-schedule-focused {{/if}}"
             style="
@@ -47,14 +43,23 @@
                 {{/if}}
                 border-bottom: 1px dashed {{travelBorderColor}};">{{{goingDuration-tmpl model}}}</div>
             {{/if}}
-            <div class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-time" style="height: {{modelDurationHeight}}px;
+            <div id="schedule-content-{{model.id}}" class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-time" style="height: {{modelDurationHeight}}px;
                 {{#if model.isFocused}}
                     border-color:{{model.color}};
                 {{else}}
                     border-color:{{model.borderColor}};
                 {{/if}}
                 {{#if hasComingDuration}}border-bottom: 1px dashed {{travelBorderColor}};{{/if}}">
+                {{#if model.raw.resizable}}
+                    <div class="{{CSS_PREFIX}}time-top-resize-handle handle-x" style="margin-left: {{@root.styles.paddingLeft}};">
+                        &nbsp;</div>
+                {{/if}}
                 {{{time-tmpl model}}}
+                {{#if model.raw.resizable}}
+                    <div class="{{CSS_PREFIX}}time-bottom-resize-handle handle-x"
+                        style="margin-left: {{@root.styles.paddingLeft}};">
+                        &nbsp;</div>
+                {{/if}}
             </div>
             {{#if hasComingDuration}}
             <div class="{{CSS_PREFIX}}time-schedule-content {{CSS_PREFIX}}time-schedule-content-travel-time" style="height: {{comingDurationHeight}}px;
@@ -65,11 +70,7 @@
                 {{/if}};">{{{comingDuration-tmpl model}}}</div>
             {{/if}}
         </div>
-        {{#if model.raw.resizable}}
-        <div class="{{CSS_PREFIX}}time-bottom-resize-handle handle-x"
-            style="margin-left: {{@root.styles.paddingLeft}};">
-            &nbsp;</div>
-        {{/if}}
+        
     </div>
     {{/if ~}}
     {{/each}}

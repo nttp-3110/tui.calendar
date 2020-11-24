@@ -157,6 +157,14 @@ function TimeGrid(name, options, panelElement, baseController) {
         ratioHourGridY: []
     }, options.week);
 
+    if (util.isFunction(options.onMouseEnterScheduleItem)) {
+        this.options.onMouseEnterScheduleItem = options.onMouseEnterScheduleItem;
+    }
+
+    if (util.isFunction(options.onMouseLeaveScheduleItem)) {
+        this.options.onMouseLeaveScheduleItem = options.onMouseLeaveScheduleItem;
+    }
+
     if (util.isFunction(options.showHourEndOfDay)) {
         this.options.showHourEndOfDay = options.showHourEndOfDay(this.options.hourStart, this.options.hourEnd);
     }
