@@ -1764,6 +1764,11 @@ Calendar.prototype.getViewName = function() {
     return this._viewName;
 };
 
+Calendar.prototype.setTimeBackground = function(timeBackground) {
+    this._controller.setTimeBackground(timeBackground);
+    this.render();
+};
+
 /**
  * Set calendar list
  * @param {Array.<CalendarProps>} calendars - {@link CalendarProps} List

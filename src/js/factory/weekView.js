@@ -212,7 +212,7 @@ module.exports = function(baseController, layoutContainer, dragHandler, options,
             /**********
              * Schedule panel by TimeGrid
              **********/
-            view = new TimeGrid(name, options, vLayout.getPanelByName(name).container);
+            view = new TimeGrid(name, options, vLayout.getPanelByName(name).container, baseController);
             weekView.addChild(view);
             util.forEach(handlers, function(type) {
                 if (!options.isReadOnly || type === 'hover' || type === 'click' || type === 'mousemove' || type === 'mouseleave') {

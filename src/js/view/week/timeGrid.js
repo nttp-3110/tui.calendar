@@ -103,7 +103,7 @@ function getHoursLabels(opt, hasHourMarker, timezoneOffset, styles) {
  * @param {number} [options.hourEnd=0] You can change view's end hours.
  * @param {HTMLElement} panelElement panel element.
  */
-function TimeGrid(name, options, panelElement) {
+function TimeGrid(name, options, panelElement, baseController) {
     var container = domutil.appendHTMLElement(
         'div',
         panelElement,
@@ -126,6 +126,8 @@ function TimeGrid(name, options, panelElement) {
          */
         this._autoScroll = new AutoScroll(container);
     }
+
+    this.baseController = baseController;
 
     this.stickyContainer = stickyContainer;
     /**
@@ -154,39 +156,6 @@ function TimeGrid(name, options, panelElement) {
         minuteCell: options.minuteCell || 15,
         ratioHourGridY: []
     }, options.week);
-
-    if (options.timeUnderground) {
-        var timeUnderground = {};
-        util.forEach(options.timeUnderground, function(item, index) {
-            var dateItem,
-                startDateItem = new TZDate(item.startDate),
-                endDateItem = new TZDate(item.endDate),
-
-                formatStartDate = datetime.format(startDateItem, 'YYYYMMDD'),
-                formatEndDate = datetime.format(endDateItem, 'YYYYMMDD'),
-
-                ratioByHourStartDate = (startDateItem.getHours() - options.week.hourStart) + (startDateItem.getMinutes() / 60),
-                ratioByHourEndDate = (endDateItem.getHours() - options.week.hourStart) + (endDateItem.getMinutes() / 60);
-
-            if (formatStartDate == formatEndDate) { // the same day
-                dateItem = {
-                    id: item.id,
-                    startDate: startDateItem,
-                    endDate: new TZDate(item.endDate),
-                    background: item.background || 'white',
-                    top: ratioByHourStartDate,
-                    height: ratioByHourEndDate - ratioByHourStartDate
-                };
-
-                if (timeUnderground[formatStartDate]) {
-                    timeUnderground[formatStartDate].push(dateItem);
-                } else {
-                    timeUnderground[formatStartDate] = [dateItem];
-                }
-            }
-        });
-        this.options.timeUnderground = timeUnderground;
-    }
 
     if (util.isFunction(options.showHourEndOfDay)) {
         this.options.showHourEndOfDay = options.showHourEndOfDay(this.options.hourStart, this.options.hourEnd);
@@ -560,7 +529,7 @@ TimeGrid.prototype._renderChildrenUnderground = function(viewModels, grids, cont
             domutil.appendHTMLElement('div', container, config.classname('time-date time-underground')),
             theme
         );
-        child.renderUnderground(ymd, options.timeUnderground[ymd] || [], containerHeight);
+        child.renderUnderground(ymd, self.baseController.timeBackground[ymd] || [], containerHeight);
 
         self.addChild(child);
 

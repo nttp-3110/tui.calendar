@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Fri Aug 28 2020
+ * @version 1.12.11 | Tue Nov 24 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -7116,6 +7116,7 @@ module.exports = config;
 var util = __webpack_require__(/*! tui-code-snippet */ "tui-code-snippet");
 var Schedule = __webpack_require__(/*! ../model/schedule */ "./src/js/model/schedule.js");
 var ScheduleViewModel = __webpack_require__(/*! ../model/viewModel/scheduleViewModel */ "./src/js/model/viewModel/scheduleViewModel.js");
+var TZDate = __webpack_require__(/*! ../common/timezone */ "./src/js/common/timezone.js").Date;
 var datetime = __webpack_require__(/*! ../common/datetime */ "./src/js/common/datetime.js");
 var common = __webpack_require__(/*! ../common/common */ "./src/js/common/common.js");
 var Theme = __webpack_require__(/*! ../theme/theme */ "./src/js/theme/theme.js");
@@ -7128,7 +7129,7 @@ var Theme = __webpack_require__(/*! ../theme/theme */ "./src/js/theme/theme.js")
  * @mixes util.CustomEvents
  */
 function Base(options) {
-    options = options || {};
+    this.options = options || {};
 
     /**
      * function for group each schedule models.
@@ -7173,7 +7174,59 @@ function Base(options) {
      * @type {Array.<Calendar>}
      */
     this.calendars = [];
+
+    this.timeBackground = {};
 }
+
+Base.prototype.setTimeBackground = function(layerBackground, silent) {
+    var opt = this.options,
+        tmpTimeBackground = {};
+
+    util.forEach(layerBackground.timeBackgrounds, function(item, index) {
+        var dateItem,
+            startDateItem = new TZDate(item.timeFrom),
+            endDateItem = new TZDate(item.timeTo),
+
+            formatStartDate = datetime.format(startDateItem, 'YYYYMMDD'),
+            formatEndDate = datetime.format(endDateItem, 'YYYYMMDD'),
+
+            ratioByHourStartDate = (startDateItem.getHours() - opt.week.hourStart) + (startDateItem.getMinutes() / 60),
+            ratioByHourEndDate = (endDateItem.getHours() - opt.week.hourStart) + (endDateItem.getMinutes() / 60);
+
+        if (formatStartDate == formatEndDate) { // the same day
+            var style = '';
+            if (layerBackground.styleTimeBackground && util.isFunction(layerBackground.styleTimeBackground)) {
+                var customStyle = layerBackground.styleTimeBackground(item);
+                util.forEach(Object.keys(customStyle), function(keyEle) {
+                    style += keyEle + ': ' + customStyle[keyEle] + ';';
+                });
+            }
+
+            var element = null;
+            if (layerBackground.elementTimeBackground && util.isFunction(layerBackground.elementTimeBackground)) {
+                element = layerBackground.elementTimeBackground(item);
+            }
+
+            dateItem = {
+                id: item.id,
+                startDate: startDateItem,
+                endDate: endDateItem,
+                style: style,
+                top: ratioByHourStartDate,
+                height: ratioByHourEndDate - ratioByHourStartDate,
+                element: element
+            };
+
+            if (tmpTimeBackground[formatStartDate]) {
+                tmpTimeBackground[formatStartDate].push(dateItem);
+            } else {
+                tmpTimeBackground[formatStartDate] = [dateItem];
+            }
+        }
+    });
+
+    this.timeBackground = tmpTimeBackground;
+};
 
 /**
  * Calculate contain dates in schedule.
@@ -10174,6 +10227,11 @@ Calendar.prototype.getViewName = function() {
     return this._viewName;
 };
 
+Calendar.prototype.setTimeBackground = function(timeBackground) {
+    this._controller.setTimeBackground(timeBackground);
+    this.render();
+};
+
 /**
  * Set calendar list
  * @param {Array.<CalendarProps>} calendars - {@link CalendarProps} List
@@ -10858,7 +10916,7 @@ module.exports = function(baseController, layoutContainer, dragHandler, options,
             /**********
              * Schedule panel by TimeGrid
              **********/
-            view = new TimeGrid(name, options, vLayout.getPanelByName(name).container);
+            view = new TimeGrid(name, options, vLayout.getPanelByName(name).container, baseController);
             weekView.addChild(view);
             util.forEach(handlers, function(type) {
                 if (!options.isReadOnly || type === 'hover' || type === 'click' || type === 'mousemove' || type === 'mouseleave') {
@@ -24159,6 +24217,53 @@ module.exports = (Handlebars['default'] || Handlebars).template({"1":function(co
 
 /***/ }),
 
+/***/ "./src/js/view/template/week/timeBackground.hbs":
+/*!******************************************************!*\
+  !*** ./src/js/view/template/week/timeBackground.hbs ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var Handlebars = __webpack_require__(/*! ./node_modules/handlebars/runtime.js */ "./node_modules/handlebars/runtime.js");
+module.exports = (Handlebars['default'] || Handlebars).template({"1":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = lookupProperty(helpers,"if").call(depth0 != null ? depth0 : (container.nullContext || {}),depth0,{"name":"if","hash":{},"fn":container.program(2, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":2,"column":0},"end":{"line":7,"column":7}}})) != null ? stack1 : "");
+},"2":function(container,depth0,helpers,partials,data) {
+    var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3=container.escapeExpression, alias4="function", lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "<div class=\"time-background\"\r\n        style=\"position: absolute; width: 100%; top: "
+    + alias3((lookupProperty(helpers,"multiply")||(depth0 && lookupProperty(depth0,"multiply"))||alias2).call(alias1,((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"oneHourHeight")),(depth0 != null ? lookupProperty(depth0,"top") : depth0),{"name":"multiply","hash":{},"data":data,"loc":{"start":{"line":4,"column":53},"end":{"line":4,"column":96}}}))
+    + "px; height: "
+    + alias3((lookupProperty(helpers,"multiply")||(depth0 && lookupProperty(depth0,"multiply"))||alias2).call(alias1,((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"oneHourHeight")),(depth0 != null ? lookupProperty(depth0,"height") : depth0),{"name":"multiply","hash":{},"data":data,"loc":{"start":{"line":4,"column":108},"end":{"line":4,"column":154}}}))
+    + "px; "
+    + alias3(((helper = (helper = lookupProperty(helpers,"style") || (depth0 != null ? lookupProperty(depth0,"style") : depth0)) != null ? helper : alias2),(typeof helper === alias4 ? helper.call(alias1,{"name":"style","hash":{},"data":data,"loc":{"start":{"line":4,"column":158},"end":{"line":4,"column":167}}}) : helper)))
+    + "\">\r\n        "
+    + ((stack1 = ((helper = (helper = lookupProperty(helpers,"element") || (depth0 != null ? lookupProperty(depth0,"element") : depth0)) != null ? helper : alias2),(typeof helper === alias4 ? helper.call(alias1,{"name":"element","hash":{},"data":data,"loc":{"start":{"line":5,"column":8},"end":{"line":5,"column":21}}}) : helper))) != null ? stack1 : "")
+    + "\r\n</div>\r\n";
+},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = lookupProperty(helpers,"each").call(depth0 != null ? depth0 : (container.nullContext || {}),(depth0 != null ? lookupProperty(depth0,"matrices") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":1,"column":0},"end":{"line":8,"column":9}}})) != null ? stack1 : "");
+},"useData":true});
+
+/***/ }),
+
 /***/ "./src/js/view/template/week/timeGrid.hbs":
 /*!************************************************!*\
   !*** ./src/js/view/template/week/timeGrid.hbs ***!
@@ -24385,43 +24490,25 @@ module.exports = (Handlebars['default'] || Handlebars).template({"1":function(co
     };
 
   return "<div class=\""
-<<<<<<< HEAD
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":51,"column":20},"end":{"line":51,"column":34}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":58,"column":20},"end":{"line":58,"column":34}}}) : helper)))
     + "timegrid-gridline\" style=\"height: "
     + alias4(alias5(((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"oneHourHeight")), depth0))
     + ";\r\n"
-    + ((stack1 = lookupProperty(helpers,"unless").call(alias1,(data && lookupProperty(data,"last")),{"name":"unless","hash":{},"fn":container.program(18, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":52,"column":12},"end":{"line":54,"column":23}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"unless").call(alias1,(data && lookupProperty(data,"last")),{"name":"unless","hash":{},"fn":container.program(21, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":59,"column":12},"end":{"line":61,"column":23}}})) != null ? stack1 : "")
     + "        \">\r\n            <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":56,"column":24},"end":{"line":56,"column":38}}}) : helper)))
-=======
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":57,"column":20},"end":{"line":57,"column":34}}}) : helper)))
-    + "timegrid-gridline\" style=\"height: "
-    + alias4(alias5(((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"oneHourHeight")), depth0))
-    + ";\r\n"
-    + ((stack1 = lookupProperty(helpers,"unless").call(alias1,(data && lookupProperty(data,"last")),{"name":"unless","hash":{},"fn":container.program(21, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":58,"column":12},"end":{"line":60,"column":23}}})) != null ? stack1 : "")
-    + "        \">\r\n            <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":62,"column":24},"end":{"line":62,"column":38}}}) : helper)))
->>>>>>> Enhanced-calendar
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":63,"column":24},"end":{"line":63,"column":38}}}) : helper)))
     + "timegrid-gridline-half\"\r\n                style=\"height: "
     + alias4(alias5(((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"halfHourHeight")), depth0))
     + "; border-bottom: "
     + alias4(alias5(((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"halfHourBorderBottom")), depth0))
     + ";\">\r\n                <div class=\""
-<<<<<<< HEAD
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":58,"column":28},"end":{"line":58,"column":42}}}) : helper)))
-=======
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":64,"column":28},"end":{"line":64,"column":42}}}) : helper)))
->>>>>>> Enhanced-calendar
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":65,"column":28},"end":{"line":65,"column":42}}}) : helper)))
     + "timegrid-gridline-quarter\"\r\n                    style=\"height: "
     + alias4(alias5(((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"quarterHourHeight")), depth0))
     + "; border-bottom: "
     + alias4(alias5(((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"quarterHourBorderBottom")), depth0))
     + ";\">\r\n                </div>\r\n\r\n            </div>\r\n            <div class=\""
-<<<<<<< HEAD
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":63,"column":24},"end":{"line":63,"column":38}}}) : helper)))
-=======
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":69,"column":24},"end":{"line":69,"column":38}}}) : helper)))
->>>>>>> Enhanced-calendar
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":70,"column":24},"end":{"line":70,"column":38}}}) : helper)))
     + "timegrid-gridline-quarter\"\r\n                style=\"height: "
     + alias4(alias5(((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"quarterHourHeight")), depth0))
     + "; border-bottom: "
@@ -24447,19 +24534,11 @@ module.exports = (Handlebars['default'] || Handlebars).template({"1":function(co
     };
 
   return "    <div class=\""
-<<<<<<< HEAD
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":74,"column":16},"end":{"line":74,"column":30}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":81,"column":16},"end":{"line":81,"column":30}}}) : helper)))
     + "timegrid-hourmarker\" style=\"top:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"hourmarkerTop") || (depth0 != null ? lookupProperty(depth0,"hourmarkerTop") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"hourmarkerTop","hash":{},"data":data,"loc":{"start":{"line":74,"column":62},"end":{"line":74,"column":79}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"hourmarkerTop") || (depth0 != null ? lookupProperty(depth0,"hourmarkerTop") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"hourmarkerTop","hash":{},"data":data,"loc":{"start":{"line":81,"column":62},"end":{"line":81,"column":79}}}) : helper)))
     + "%\">\r\n"
-    + ((stack1 = (lookupProperty(helpers,"fi")||(depth0 && lookupProperty(depth0,"fi"))||alias2).call(alias1,(depth0 != null ? lookupProperty(depth0,"positionHourMarker") : depth0),"===","today",{"name":"fi","hash":{},"fn":container.program(21, data, 0),"inverse":container.program(24, data, 0),"data":data,"loc":{"start":{"line":75,"column":8},"end":{"line":97,"column":15}}})) != null ? stack1 : "")
-=======
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":80,"column":16},"end":{"line":80,"column":30}}}) : helper)))
-    + "timegrid-hourmarker\" style=\"top:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"hourmarkerTop") || (depth0 != null ? lookupProperty(depth0,"hourmarkerTop") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"hourmarkerTop","hash":{},"data":data,"loc":{"start":{"line":80,"column":62},"end":{"line":80,"column":79}}}) : helper)))
-    + "%\">\r\n"
-    + ((stack1 = (lookupProperty(helpers,"fi")||(depth0 && lookupProperty(depth0,"fi"))||alias2).call(alias1,(depth0 != null ? lookupProperty(depth0,"positionHourMarker") : depth0),"===","today",{"name":"fi","hash":{},"fn":container.program(24, data, 0),"inverse":container.program(27, data, 0),"data":data,"loc":{"start":{"line":81,"column":8},"end":{"line":103,"column":15}}})) != null ? stack1 : "")
->>>>>>> Enhanced-calendar
+    + ((stack1 = (lookupProperty(helpers,"fi")||(depth0 && lookupProperty(depth0,"fi"))||alias2).call(alias1,(depth0 != null ? lookupProperty(depth0,"positionHourMarker") : depth0),"===","today",{"name":"fi","hash":{},"fn":container.program(24, data, 0),"inverse":container.program(27, data, 0),"data":data,"loc":{"start":{"line":82,"column":8},"end":{"line":104,"column":15}}})) != null ? stack1 : "")
     + "    </div>\r\n";
 },"24":function(container,depth0,helpers,partials,data) {
     var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
@@ -24469,23 +24548,13 @@ module.exports = (Handlebars['default'] || Handlebars).template({"1":function(co
         return undefined
     };
 
-<<<<<<< HEAD
-  return ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"todayMarker") : depth0),{"name":"if","hash":{},"fn":container.program(22, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":76,"column":8},"end":{"line":80,"column":15}}})) != null ? stack1 : "")
+  return ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"todayMarker") : depth0),{"name":"if","hash":{},"fn":container.program(25, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":83,"column":8},"end":{"line":87,"column":15}}})) != null ? stack1 : "")
     + "        <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":81,"column":20},"end":{"line":81,"column":34}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":88,"column":20},"end":{"line":88,"column":34}}}) : helper)))
     + "timegrid-hourmarker-line-today\"\r\n            style=\"left:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":82,"column":24},"end":{"line":82,"column":43}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":89,"column":24},"end":{"line":89,"column":43}}}) : helper)))
     + "%; width: "
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerWidth") || (depth0 != null ? lookupProperty(depth0,"todaymarkerWidth") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerWidth","hash":{},"data":data,"loc":{"start":{"line":82,"column":53},"end":{"line":82,"column":73}}}) : helper)))
-=======
-  return ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"todayMarker") : depth0),{"name":"if","hash":{},"fn":container.program(25, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":82,"column":8},"end":{"line":86,"column":15}}})) != null ? stack1 : "")
-    + "        <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":87,"column":20},"end":{"line":87,"column":34}}}) : helper)))
-    + "timegrid-hourmarker-line-today\"\r\n            style=\"left:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":88,"column":24},"end":{"line":88,"column":43}}}) : helper)))
-    + "%; width: "
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerWidth") || (depth0 != null ? lookupProperty(depth0,"todaymarkerWidth") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerWidth","hash":{},"data":data,"loc":{"start":{"line":88,"column":53},"end":{"line":88,"column":73}}}) : helper)))
->>>>>>> Enhanced-calendar
+    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerWidth") || (depth0 != null ? lookupProperty(depth0,"todaymarkerWidth") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerWidth","hash":{},"data":data,"loc":{"start":{"line":89,"column":53},"end":{"line":89,"column":73}}}) : helper)))
     + "%; border-top: "
     + alias4(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"styles") : depth0)) != null ? lookupProperty(stack1,"currentTimeTodayBorderTop") : stack1), depth0))
     + ";\">\r\n        </div>\r\n";
@@ -24498,15 +24567,9 @@ module.exports = (Handlebars['default'] || Handlebars).template({"1":function(co
     };
 
   return "        <div class=\""
-<<<<<<< HEAD
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":77,"column":20},"end":{"line":77,"column":34}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":84,"column":20},"end":{"line":84,"column":34}}}) : helper)))
     + "timegrid-todaymarker\"\r\n            style=\"left:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":78,"column":24},"end":{"line":78,"column":43}}}) : helper)))
-=======
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":83,"column":20},"end":{"line":83,"column":34}}}) : helper)))
-    + "timegrid-todaymarker\"\r\n            style=\"left:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":84,"column":24},"end":{"line":84,"column":43}}}) : helper)))
->>>>>>> Enhanced-calendar
+    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":85,"column":24},"end":{"line":85,"column":43}}}) : helper)))
     + "%; background-color: "
     + alias4(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"styles") : depth0)) != null ? lookupProperty(stack1,"currentTimeBulletBackgroundColor") : stack1), depth0))
     + "; \">today\r\n        </div>\r\n";
@@ -24519,47 +24582,25 @@ module.exports = (Handlebars['default'] || Handlebars).template({"1":function(co
     };
 
   return "        <div class=\""
-<<<<<<< HEAD
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":85,"column":20},"end":{"line":85,"column":34}}}) : helper)))
-    + "timegrid-hourmarker-line-left\"\r\n            style=\"width:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":86,"column":25},"end":{"line":86,"column":44}}}) : helper)))
-    + "%; border-top: "
-    + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"styles") : depth0)) != null ? lookupProperty(stack1,"currentTimeLeftBorderTop") : stack1), depth0))
-    + ";\"></div>\r\n"
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"todayMarker") : depth0),{"name":"if","hash":{},"fn":container.program(22, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":87,"column":8},"end":{"line":91,"column":15}}})) != null ? stack1 : "")
-    + "        <div class=\""
     + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":92,"column":20},"end":{"line":92,"column":34}}}) : helper)))
-    + "timegrid-hourmarker-line-today\"\r\n            style=\"left:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":93,"column":24},"end":{"line":93,"column":43}}}) : helper)))
-    + "%; width: "
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerWidth") || (depth0 != null ? lookupProperty(depth0,"todaymarkerWidth") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerWidth","hash":{},"data":data,"loc":{"start":{"line":93,"column":53},"end":{"line":93,"column":73}}}) : helper)))
-    + "%; border-top: "
-    + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"styles") : depth0)) != null ? lookupProperty(stack1,"currentTimeTodayBorderTop") : stack1), depth0))
-    + ";\">\r\n        </div>\r\n        <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":95,"column":20},"end":{"line":95,"column":34}}}) : helper)))
-    + "timegrid-hourmarker-line-right\"\r\n            style=\"left:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerRight") || (depth0 != null ? lookupProperty(depth0,"todaymarkerRight") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerRight","hash":{},"data":data,"loc":{"start":{"line":96,"column":24},"end":{"line":96,"column":44}}}) : helper)))
-=======
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":91,"column":20},"end":{"line":91,"column":34}}}) : helper)))
     + "timegrid-hourmarker-line-left\"\r\n            style=\"width:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":92,"column":25},"end":{"line":92,"column":44}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":93,"column":25},"end":{"line":93,"column":44}}}) : helper)))
     + "%; border-top: "
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"styles") : depth0)) != null ? lookupProperty(stack1,"currentTimeLeftBorderTop") : stack1), depth0))
     + ";\"></div>\r\n"
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"todayMarker") : depth0),{"name":"if","hash":{},"fn":container.program(25, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":93,"column":8},"end":{"line":97,"column":15}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"todayMarker") : depth0),{"name":"if","hash":{},"fn":container.program(25, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":94,"column":8},"end":{"line":98,"column":15}}})) != null ? stack1 : "")
     + "        <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":98,"column":20},"end":{"line":98,"column":34}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":99,"column":20},"end":{"line":99,"column":34}}}) : helper)))
     + "timegrid-hourmarker-line-today\"\r\n            style=\"left:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":99,"column":24},"end":{"line":99,"column":43}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerLeft") || (depth0 != null ? lookupProperty(depth0,"todaymarkerLeft") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerLeft","hash":{},"data":data,"loc":{"start":{"line":100,"column":24},"end":{"line":100,"column":43}}}) : helper)))
     + "%; width: "
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerWidth") || (depth0 != null ? lookupProperty(depth0,"todaymarkerWidth") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerWidth","hash":{},"data":data,"loc":{"start":{"line":99,"column":53},"end":{"line":99,"column":73}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerWidth") || (depth0 != null ? lookupProperty(depth0,"todaymarkerWidth") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerWidth","hash":{},"data":data,"loc":{"start":{"line":100,"column":53},"end":{"line":100,"column":73}}}) : helper)))
     + "%; border-top: "
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"styles") : depth0)) != null ? lookupProperty(stack1,"currentTimeTodayBorderTop") : stack1), depth0))
     + ";\">\r\n        </div>\r\n        <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":101,"column":20},"end":{"line":101,"column":34}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":102,"column":20},"end":{"line":102,"column":34}}}) : helper)))
     + "timegrid-hourmarker-line-right\"\r\n            style=\"left:"
-    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerRight") || (depth0 != null ? lookupProperty(depth0,"todaymarkerRight") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerRight","hash":{},"data":data,"loc":{"start":{"line":102,"column":24},"end":{"line":102,"column":44}}}) : helper)))
->>>>>>> Enhanced-calendar
+    + alias4(((helper = (helper = lookupProperty(helpers,"todaymarkerRight") || (depth0 != null ? lookupProperty(depth0,"todaymarkerRight") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"todaymarkerRight","hash":{},"data":data,"loc":{"start":{"line":103,"column":24},"end":{"line":103,"column":44}}}) : helper)))
     + "%; border-top: "
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"styles") : depth0)) != null ? lookupProperty(stack1,"currentTimeRightBorderTop") : stack1), depth0))
     + ";\"></div>\r\n";
@@ -24584,29 +24625,17 @@ module.exports = (Handlebars['default'] || Handlebars).template({"1":function(co
     + "timegrid-right\" style=\"margin-left: "
     + alias4(alias5(((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"leftWidth")), depth0))
     + ";\">\r\n    <div class=\""
-<<<<<<< HEAD
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":48,"column":16},"end":{"line":48,"column":30}}}) : helper)))
-    + "timegrid-underground\"></div>\r\n    <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":49,"column":16},"end":{"line":49,"column":30}}}) : helper)))
-    + "timegrid-h-grid\">\r\n"
-    + ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"hoursLabels") : depth0),{"name":"each","hash":{},"fn":container.program(17, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":50,"column":8},"end":{"line":67,"column":19}}})) != null ? stack1 : "")
-    + "</div>\r\n    <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":69,"column":16},"end":{"line":69,"column":30}}}) : helper)))
-    + "timegrid-schedules\">\r\n        <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":70,"column":20},"end":{"line":70,"column":34}}}) : helper)))
-    + "timegrid-schedules-container\"></div>\r\n    </div>\r\n\r\n"
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"showHourMarker") : depth0),{"name":"if","hash":{},"fn":container.program(20, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":73,"column":4},"end":{"line":99,"column":11}}})) != null ? stack1 : "")
-=======
     + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":55,"column":16},"end":{"line":55,"column":30}}}) : helper)))
+    + "timegrid-underground\"></div>\r\n    <div class=\""
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":56,"column":16},"end":{"line":56,"column":30}}}) : helper)))
     + "timegrid-h-grid\">\r\n"
-    + ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"hoursLabels") : depth0),{"name":"each","hash":{},"fn":container.program(20, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":56,"column":8},"end":{"line":73,"column":19}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"hoursLabels") : depth0),{"name":"each","hash":{},"fn":container.program(20, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":57,"column":8},"end":{"line":74,"column":19}}})) != null ? stack1 : "")
     + "</div>\r\n    <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":75,"column":16},"end":{"line":75,"column":30}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":76,"column":16},"end":{"line":76,"column":30}}}) : helper)))
     + "timegrid-schedules\">\r\n        <div class=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":76,"column":20},"end":{"line":76,"column":34}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":77,"column":20},"end":{"line":77,"column":34}}}) : helper)))
     + "timegrid-schedules-container\"></div>\r\n    </div>\r\n\r\n"
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"showHourMarker") : depth0),{"name":"if","hash":{},"fn":container.program(23, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":79,"column":4},"end":{"line":105,"column":11}}})) != null ? stack1 : "")
->>>>>>> Enhanced-calendar
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"showHourMarker") : depth0),{"name":"if","hash":{},"fn":container.program(23, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":80,"column":4},"end":{"line":106,"column":11}}})) != null ? stack1 : "")
     + "</div>";
 },"useData":true});
 
@@ -24730,51 +24759,6 @@ module.exports = (Handlebars['default'] || Handlebars).template({"1":function(co
     + "\r\n    <div class=\""
     + alias4(((helper = (helper = lookupProperty(helpers,"CSS_PREFIX") || (depth0 != null ? lookupProperty(depth0,"CSS_PREFIX") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"CSS_PREFIX","hash":{},"data":data,"loc":{"start":{"line":14,"column":16},"end":{"line":14,"column":30}}}) : helper)))
     + "time-date-schedule-block-cover\"></div>\r\n</div>\r\n";
-},"useData":true});
-
-/***/ }),
-
-/***/ "./src/js/view/template/week/timeUnderground.hbs":
-/*!*******************************************************!*\
-  !*** ./src/js/view/template/week/timeUnderground.hbs ***!
-  \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var Handlebars = __webpack_require__(/*! ./node_modules/handlebars/runtime.js */ "./node_modules/handlebars/runtime.js");
-module.exports = (Handlebars['default'] || Handlebars).template({"1":function(container,depth0,helpers,partials,data) {
-    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
-        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
-          return parent[propertyName];
-        }
-        return undefined
-    };
-
-  return ((stack1 = lookupProperty(helpers,"if").call(depth0 != null ? depth0 : (container.nullContext || {}),depth0,{"name":"if","hash":{},"fn":container.program(2, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":2,"column":0},"end":{"line":9,"column":7}}})) != null ? stack1 : "");
-},"2":function(container,depth0,helpers,partials,data) {
-    var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
-        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
-          return parent[propertyName];
-        }
-        return undefined
-    };
-
-  return "<div class=\"underground-item\" style=\"position: absolute;\r\n        background: "
-    + alias3(((helper = (helper = lookupProperty(helpers,"background") || (depth0 != null ? lookupProperty(depth0,"background") : depth0)) != null ? helper : alias2),(typeof helper === "function" ? helper.call(alias1,{"name":"background","hash":{},"data":data,"loc":{"start":{"line":4,"column":20},"end":{"line":4,"column":34}}}) : helper)))
-    + "; \r\n        width: 100%;\r\n        top: "
-    + alias3((lookupProperty(helpers,"multiply")||(depth0 && lookupProperty(depth0,"multiply"))||alias2).call(alias1,((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"oneHourHeight")),(depth0 != null ? lookupProperty(depth0,"top") : depth0),{"name":"multiply","hash":{},"data":data,"loc":{"start":{"line":6,"column":13},"end":{"line":6,"column":56}}}))
-    + "px; \r\n        height: "
-    + alias3((lookupProperty(helpers,"multiply")||(depth0 && lookupProperty(depth0,"multiply"))||alias2).call(alias1,((stack1 = ((stack1 = (data && lookupProperty(data,"root"))) && lookupProperty(stack1,"styles"))) && lookupProperty(stack1,"oneHourHeight")),(depth0 != null ? lookupProperty(depth0,"height") : depth0),{"name":"multiply","hash":{},"data":data,"loc":{"start":{"line":7,"column":16},"end":{"line":7,"column":62}}}))
-    + "px\">\r\n</div>\r\n";
-},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
-    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
-        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
-          return parent[propertyName];
-        }
-        return undefined
-    };
-
-  return ((stack1 = lookupProperty(helpers,"each").call(depth0 != null ? depth0 : (container.nullContext || {}),(depth0 != null ? lookupProperty(depth0,"matrices") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":1,"column":0},"end":{"line":10,"column":9}}})) != null ? stack1 : "");
 },"useData":true});
 
 /***/ }),
@@ -25773,7 +25757,7 @@ var datetime = __webpack_require__(/*! ../../common/datetime */ "./src/js/common
 var domutil = __webpack_require__(/*! ../../common/domutil */ "./src/js/common/domutil.js");
 var View = __webpack_require__(/*! ../view */ "./src/js/view/view.js");
 var timeTmpl = __webpack_require__(/*! ../template/week/time.hbs */ "./src/js/view/template/week/time.hbs");
-var timeUndergroundTmpl = __webpack_require__(/*! ../template/week/timeUnderground.hbs */ "./src/js/view/template/week/timeUnderground.hbs");
+var timeBackgroundTmpl = __webpack_require__(/*! ../template/week/timeBackground.hbs */ "./src/js/view/template/week/timeBackground.hbs");
 
 var forEachArr = util.forEachArray;
 var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
@@ -25806,7 +25790,7 @@ function Time(options, container, theme) {
         isReadOnly: false
     }, options);
     this.timeTmpl = timeTmpl;
-    this.timeUndergroundTmpl = timeUndergroundTmpl;
+    this.timeBackgroundTmpl = timeBackgroundTmpl;
 
     /**
      * @type {Theme}
@@ -26042,8 +26026,8 @@ Time.prototype.render = function(ymd, matrices, containerHeight) {
  * @param {number} containerHeight - container's height
  */
 Time.prototype.renderUnderground = function(ymd, matrices, containerHeight) {
-    this._getBaseViewModel(ymd, matrices || [], containerHeight);
-    this.container.innerHTML = this.timeUndergroundTmpl({
+    // this._getBaseViewModel(ymd, matrices || [], containerHeight);
+    this.container.innerHTML = this.timeBackgroundTmpl({
         matrices: matrices || [],
         styles: this._getStyles(this.theme)
     });
@@ -26196,7 +26180,7 @@ function getHoursLabels(opt, hasHourMarker, timezoneOffset, styles) {
  * @param {number} [options.hourEnd=0] You can change view's end hours.
  * @param {HTMLElement} panelElement panel element.
  */
-function TimeGrid(name, options, panelElement) {
+function TimeGrid(name, options, panelElement, baseController) {
     var container = domutil.appendHTMLElement(
         'div',
         panelElement,
@@ -26219,6 +26203,8 @@ function TimeGrid(name, options, panelElement) {
          */
         this._autoScroll = new AutoScroll(container);
     }
+
+    this.baseController = baseController;
 
     this.stickyContainer = stickyContainer;
     /**
@@ -26248,39 +26234,6 @@ function TimeGrid(name, options, panelElement) {
         ratioHourGridY: []
     }, options.week);
 
-<<<<<<< HEAD
-    if (options.timeUnderground) {
-        var timeUnderground = {};
-        util.forEach(options.timeUnderground, function(item, index) {
-            var dateItem,
-                startDateItem = new TZDate(item.startDate),
-                endDateItem = new TZDate(item.endDate),
-
-                formatStartDate = datetime.format(startDateItem, 'YYYYMMDD'),
-                formatEndDate = datetime.format(endDateItem, 'YYYYMMDD'),
-
-                ratioByHourStartDate = (startDateItem.getHours() - options.week.hourStart) + (startDateItem.getMinutes() / 60),
-                ratioByHourEndDate = (endDateItem.getHours() - options.week.hourStart) + (endDateItem.getMinutes() / 60);
-
-            if (formatStartDate == formatEndDate) { // the same day
-                dateItem = {
-                    id: item.id,
-                    startDate: startDateItem,
-                    endDate: new TZDate(item.endDate),
-                    background: item.background || 'white',
-                    top: ratioByHourStartDate,
-                    height: ratioByHourEndDate - ratioByHourStartDate
-                };
-
-                if (timeUnderground[formatStartDate]) {
-                    timeUnderground[formatStartDate].push(dateItem);
-                } else {
-                    timeUnderground[formatStartDate] = [dateItem];
-                }
-            }
-        });
-        this.options.timeUnderground = timeUnderground;
-=======
     if (util.isFunction(options.showHourEndOfDay)) {
         this.options.showHourEndOfDay = options.showHourEndOfDay(this.options.hourStart, this.options.hourEnd);
     }
@@ -26296,7 +26249,6 @@ function TimeGrid(name, options, panelElement) {
         }
         ratioHourGridY.push(1);
         this.options.ratioHourGridY = ratioHourGridY;
->>>>>>> Enhanced-calendar
     }
 
     if (options.disabledGrid) {
@@ -26654,7 +26606,7 @@ TimeGrid.prototype._renderChildrenUnderground = function(viewModels, grids, cont
             domutil.appendHTMLElement('div', container, config.classname('time-date time-underground')),
             theme
         );
-        child.renderUnderground(ymd, options.timeUnderground[ymd] || [], containerHeight);
+        child.renderUnderground(ymd, self.baseController.timeBackground[ymd] || [], containerHeight);
 
         self.addChild(child);
 

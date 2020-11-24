@@ -10,7 +10,7 @@ var datetime = require('../../common/datetime');
 var domutil = require('../../common/domutil');
 var View = require('../view');
 var timeTmpl = require('../template/week/time.hbs');
-var timeUndergroundTmpl = require('../template/week/timeUnderground.hbs');
+var timeBackgroundTmpl = require('../template/week/timeBackground.hbs');
 
 var forEachArr = util.forEachArray;
 var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
@@ -43,7 +43,7 @@ function Time(options, container, theme) {
         isReadOnly: false
     }, options);
     this.timeTmpl = timeTmpl;
-    this.timeUndergroundTmpl = timeUndergroundTmpl;
+    this.timeBackgroundTmpl = timeBackgroundTmpl;
 
     /**
      * @type {Theme}
@@ -279,8 +279,8 @@ Time.prototype.render = function(ymd, matrices, containerHeight) {
  * @param {number} containerHeight - container's height
  */
 Time.prototype.renderUnderground = function(ymd, matrices, containerHeight) {
-    this._getBaseViewModel(ymd, matrices || [], containerHeight);
-    this.container.innerHTML = this.timeUndergroundTmpl({
+    // this._getBaseViewModel(ymd, matrices || [], containerHeight);
+    this.container.innerHTML = this.timeBackgroundTmpl({
         matrices: matrices || [],
         styles: this._getStyles(this.theme)
     });

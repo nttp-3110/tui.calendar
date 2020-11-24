@@ -7,6 +7,7 @@
 var util = require('tui-code-snippet');
 var Schedule = require('../model/schedule');
 var ScheduleViewModel = require('../model/viewModel/scheduleViewModel');
+var TZDate = require('../common/timezone').Date;
 var datetime = require('../common/datetime');
 var common = require('../common/common');
 var Theme = require('../theme/theme');
@@ -19,7 +20,7 @@ var Theme = require('../theme/theme');
  * @mixes util.CustomEvents
  */
 function Base(options) {
-    options = options || {};
+    this.options = options || {};
 
     /**
      * function for group each schedule models.
@@ -64,7 +65,59 @@ function Base(options) {
      * @type {Array.<Calendar>}
      */
     this.calendars = [];
+
+    this.timeBackground = {};
 }
+
+Base.prototype.setTimeBackground = function(layerBackground, silent) {
+    var opt = this.options,
+        tmpTimeBackground = {};
+
+    util.forEach(layerBackground.timeBackgrounds, function(item, index) {
+        var dateItem,
+            startDateItem = new TZDate(item.timeFrom),
+            endDateItem = new TZDate(item.timeTo),
+
+            formatStartDate = datetime.format(startDateItem, 'YYYYMMDD'),
+            formatEndDate = datetime.format(endDateItem, 'YYYYMMDD'),
+
+            ratioByHourStartDate = (startDateItem.getHours() - opt.week.hourStart) + (startDateItem.getMinutes() / 60),
+            ratioByHourEndDate = (endDateItem.getHours() - opt.week.hourStart) + (endDateItem.getMinutes() / 60);
+
+        if (formatStartDate == formatEndDate) { // the same day
+            var style = '';
+            if (layerBackground.styleTimeBackground && util.isFunction(layerBackground.styleTimeBackground)) {
+                var customStyle = layerBackground.styleTimeBackground(item);
+                util.forEach(Object.keys(customStyle), function(keyEle) {
+                    style += keyEle + ': ' + customStyle[keyEle] + ';';
+                });
+            }
+
+            var element = null;
+            if (layerBackground.elementTimeBackground && util.isFunction(layerBackground.elementTimeBackground)) {
+                element = layerBackground.elementTimeBackground(item);
+            }
+
+            dateItem = {
+                id: item.id,
+                startDate: startDateItem,
+                endDate: endDateItem,
+                style: style,
+                top: ratioByHourStartDate,
+                height: ratioByHourEndDate - ratioByHourStartDate,
+                element: element
+            };
+
+            if (tmpTimeBackground[formatStartDate]) {
+                tmpTimeBackground[formatStartDate].push(dateItem);
+            } else {
+                tmpTimeBackground[formatStartDate] = [dateItem];
+            }
+        }
+    });
+
+    this.timeBackground = tmpTimeBackground;
+};
 
 /**
  * Calculate contain dates in schedule.

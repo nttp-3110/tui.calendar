@@ -1,0 +1,8 @@
+{{#each matrices}}
+{{#if this ~}}
+<div class="time-background"
+        style="position: absolute; width: 100%; top: {{multiply @root.styles.oneHourHeight top}}px; height: {{multiply @root.styles.oneHourHeight height}}px; {{style}}">
+        {{{element}}}
+</div>
+{{/if}}
+{{/each}}
