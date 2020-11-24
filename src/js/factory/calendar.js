@@ -1258,14 +1258,6 @@ Calendar.prototype.setCalendarColor = function(calendarId, option, silent) {
     }
 };
 
-/**********
- * Custom Events
- **********/
-
-Calendar.prototype._onHover = function(clickScheduleData) {
-    console.log();
-};
-
 /**
  * A bridge-based event handler for connecting a click handler to a user click event handler for each view
  * @fires Calendar#clickSchedule

@@ -27,7 +27,6 @@ var DayGridClick = require('../handler/daygrid/click');
 var DayGridCreation = require('../handler/daygrid/creation');
 var DayGridMove = require('../handler/daygrid/move');
 var DayGridResize = require('../handler/daygrid/resize');
-// var TimeHover = require('../handler/time/hover');
 var TimeClick = require('../handler/time/click');
 var TimeCreation = require('../handler/time/creation');
 var TimeMove = require('../handler/time/move');
@@ -44,7 +43,6 @@ var DAYGRID_HANDLDERS = {
     'mouseleave': TimeMouseLeave
 };
 var TIMEGRID_HANDLERS = {
-    // 'hover': TimeHover,
     'click': TimeClick,
     'creation': TimeCreation,
     'move': TimeMove,
@@ -215,7 +213,7 @@ module.exports = function(baseController, layoutContainer, dragHandler, options,
             view = new TimeGrid(name, options, vLayout.getPanelByName(name).container, baseController);
             weekView.addChild(view);
             util.forEach(handlers, function(type) {
-                if (!options.isReadOnly || type === 'hover' || type === 'click' || type === 'mousemove' || type === 'mouseleave') {
+                if (!options.isReadOnly || type === 'click' || type === 'mousemove' || type === 'mouseleave') {
                     weekView.handler[type][name] =
                         new TIMEGRID_HANDLERS[type](dragHandler, view, baseController, options);
                 }

@@ -483,7 +483,6 @@ TimeCreation.prototype._onDblClick = function (e) {
  * @param {Schedule} schedule - schedule instance
  */
 TimeCreation.prototype.invokeCreationClick = function (schedule) {
-    console.log('---------< ', schedule);
     var opt = this.timeGridView.options,
         range = datetime.range(
             opt.renderStartDate,

@@ -9721,14 +9721,6 @@ Calendar.prototype.setCalendarColor = function(calendarId, option, silent) {
     }
 };
 
-/**********
- * Custom Events
- **********/
-
-Calendar.prototype._onHover = function(clickScheduleData) {
-    console.log();
-};
-
 /**
  * A bridge-based event handler for connecting a click handler to a user click event handler for each view
  * @fires Calendar#clickSchedule
@@ -10731,7 +10723,6 @@ var DayGridClick = __webpack_require__(/*! ../handler/daygrid/click */ "./src/js
 var DayGridCreation = __webpack_require__(/*! ../handler/daygrid/creation */ "./src/js/handler/daygrid/creation.js");
 var DayGridMove = __webpack_require__(/*! ../handler/daygrid/move */ "./src/js/handler/daygrid/move.js");
 var DayGridResize = __webpack_require__(/*! ../handler/daygrid/resize */ "./src/js/handler/daygrid/resize.js");
-// var TimeHover = require('../handler/time/hover');
 var TimeClick = __webpack_require__(/*! ../handler/time/click */ "./src/js/handler/time/click.js");
 var TimeCreation = __webpack_require__(/*! ../handler/time/creation */ "./src/js/handler/time/creation.js");
 var TimeMove = __webpack_require__(/*! ../handler/time/move */ "./src/js/handler/time/move.js");
@@ -10748,7 +10739,6 @@ var DAYGRID_HANDLDERS = {
     'mouseleave': TimeMouseLeave
 };
 var TIMEGRID_HANDLERS = {
-    // 'hover': TimeHover,
     'click': TimeClick,
     'creation': TimeCreation,
     'move': TimeMove,
@@ -10919,7 +10909,7 @@ module.exports = function(baseController, layoutContainer, dragHandler, options,
             view = new TimeGrid(name, options, vLayout.getPanelByName(name).container, baseController);
             weekView.addChild(view);
             util.forEach(handlers, function(type) {
-                if (!options.isReadOnly || type === 'hover' || type === 'click' || type === 'mousemove' || type === 'mouseleave') {
+                if (!options.isReadOnly || type === 'click' || type === 'mousemove' || type === 'mouseleave') {
                     weekView.handler[type][name] =
                         new TIMEGRID_HANDLERS[type](dragHandler, view, baseController, options);
                 }
@@ -16369,7 +16359,6 @@ TimeCreation.prototype._onDblClick = function (e) {
  * @param {Schedule} schedule - schedule instance
  */
 TimeCreation.prototype.invokeCreationClick = function (schedule) {
-    console.log('---------< ', schedule);
     var opt = this.timeGridView.options,
         range = datetime.range(
             opt.renderStartDate,
