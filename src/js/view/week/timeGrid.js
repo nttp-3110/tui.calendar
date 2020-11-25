@@ -154,7 +154,8 @@ function TimeGrid(name, options, panelElement, baseController) {
             onlyShowInRange: false
         },
         minuteCell: options.minuteCell || 15,
-        ratioHourGridY: []
+        ratioHourGridY: [],
+        defaultScrollToNow: util.isBoolean(options.defaultScrollToNow) ? options.defaultScrollToNow : true
     }, options.week);
 
     if (util.isFunction(options.onMouseEnterScheduleItem)) {
@@ -602,7 +603,7 @@ TimeGrid.prototype.render = function(viewModel) {
      **********/
     this.hourmarkers = domutil.find(config.classname('.timegrid-hourmarker'), container, true);
 
-    if (!this._scrolled) {
+    if (!this._scrolled && opt.defaultScrollToNow) {
         this._scrolled = true;
         this.scrollToNow();
     }
