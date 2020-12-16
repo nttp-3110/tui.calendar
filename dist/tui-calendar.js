@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Wed Nov 25 2020
+ * @version 1.12.11 | Wed Dec 16 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -17991,7 +17991,7 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
 
         // custom validate of calendar
         if (this._checkExpectedConditionResize) {
-            customCondResult = this._checkExpectedConditionResize(scheduleData, this._dragStartDirection, dragGridRange, this._rangeTime);
+            customCondResult = this._checkExpectedConditionResize(scheduleData, this._dragStartDirection, dragGridRange, this._rangeTime, schedule);
             if (typeof customCondResult === 'boolean') {
                 if (customCondResult) {
                     this._gridStop = null;

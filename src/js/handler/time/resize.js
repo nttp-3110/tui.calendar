@@ -298,7 +298,7 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
 
         // custom validate of calendar
         if (this._checkExpectedConditionResize) {
-            customCondResult = this._checkExpectedConditionResize(scheduleData, this._dragStartDirection, dragGridRange, this._rangeTime);
+            customCondResult = this._checkExpectedConditionResize(scheduleData, this._dragStartDirection, dragGridRange, this._rangeTime, schedule);
             if (typeof customCondResult === 'boolean') {
                 if (customCondResult) {
                     this._gridStop = null;
