@@ -12,6 +12,7 @@ var domevent = require('../../common/domevent');
 var datetime = require('../../common/datetime');
 var Timezone = require('../../common/timezone');
 var reqAnimFrame = require('../../common/reqAnimFrame');
+var timeCore = require('../../handler/time/core');
 var View = require('../view');
 var Time = require('./time');
 var AutoScroll = require('../../common/autoScroll');
@@ -364,7 +365,7 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
             lastTimeSlot,
             shiftByOffset = parseInt(timezone.timezoneOffset / SIXTY_MINUTES, 10),
             nowHours = common.shiftHours(now.getHours(), shiftByOffset) % 24;
-            
+
         timezoneDifference = timezone.timezoneOffset + primaryOffset;
         timeSlots = getHoursLabels(opt, currentHours >= 0, timezoneDifference, styles);
         lastTimeSlot = timeSlots[timeSlots.length - 1];
@@ -377,7 +378,7 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
                 fontWeight: lastTimeSlot.fontWeight,
                 hidden: lastTimeSlot.hour + 1 == nowHours,
                 isEndTime: true
-            });            
+            });
         }
 
         hourmarker.setMinutes(hourmarker.getMinutes() + timezoneDifference);
@@ -459,7 +460,7 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
         var isDueDate = Number(ymd) == Number(datetime.format(new TZDate(options.disabledGrid.hourDisabled), 'YYYYMMDD'));
         isToday = ymd === today;
         isDisableGrid = options.disabledGrid.hourDisabled && Number(ymd) >= Number(datetime.format(new TZDate(options.disabledGrid.hourDisabled), 'YYYYMMDD'));
-        ratioByHourDisabled = 0;    
+        ratioByHourDisabled = 0;
         elementDisabled = null;
         if (isDueDate) {
             ratioByHourDisabled = (hourDisabled - options.hourStart) + (minuteDisabled / 60);
@@ -812,5 +813,7 @@ TimeGrid.prototype._onClickStickyContainer = function(event) {
 
     this.fire('clickTimezonesCollapsedBtn');
 };
+
+timeCore.mixin(TimeGrid);
 
 module.exports = TimeGrid;

@@ -116,7 +116,7 @@ TimeCreationGuide.prototype._clearGuideElement = function() {
 TimeCreationGuide.prototype._refreshGuideElement = function(top, height, start, end, bottomLabel, scheduleData) {
     var guideElement = this.guideElement,
         timeElement = this.guideTimeElement;
-        
+
     guideElement.style.top = top + 'px';
     guideElement.style.height = height + 'px';
     guideElement.style.display = 'block';
@@ -125,7 +125,7 @@ TimeCreationGuide.prototype._refreshGuideElement = function(top, height, start, 
         guideElement.innerHTML = this._creationGuideTemplate(start, end);
     } else {
         timeElement.innerHTML = datetime.format(start, 'HH:mm') +
-        ' - ' + datetime.format(end, 'HH:mm');
+            ' - ' + datetime.format(end, 'HH:mm');
     }
 
     if (bottomLabel) {
@@ -201,15 +201,13 @@ TimeCreationGuide.prototype._getStyleDataFunc = function(viewHeight, hourLength,
      */
     function getStyleData(scheduleData) {
         // Trick code
-        var minMinutes = scheduleData.delta || 30;
+        var secondsFromStart = scheduleData.delta || 1800; // default 30p
         var gridY = scheduleData.nearestGridY,
             gridTimeY = scheduleData.nearestGridTimeY,
-            gridEndTimeY = scheduleData.nearestGridEndTimeY || new TZDate(gridTimeY).addMinutes(minMinutes),
-            top, startTime, endTime;
-
-        top = common.limit(ratio(hourLength, viewHeight, gridY), [0], [viewHeight]);
-        startTime = common.limitDate(gridTimeY, todayStartTime, todayEndTime);
-        endTime = common.limitDate(gridEndTimeY, todayStartTime, todayEndTime);
+            gridEndTimeY = scheduleData.nearestGridEndTimeY || new TZDate(gridTimeY).addSeconds(secondsFromStart),
+            top = common.limit(ratio(hourLength, viewHeight, gridY), [0], [viewHeight]),
+            startTime = common.limitDate(gridTimeY, todayStartTime, todayEndTime),
+            endTime = common.limitDate(gridEndTimeY, todayStartTime, todayEndTime);
 
         return [top, startTime, endTime];
     }
@@ -244,8 +242,6 @@ TimeCreationGuide.prototype._clickGuideElement = function(event) {
  */
 TimeCreationGuide.prototype._createGuideElement = function(dragStartEventData) {
     var relatedView = dragStartEventData.relatedView,
-        // customCreationGuideEndTime = dragStartEventData.endTime,
-        // customCreationGuideStartTime = dragStartEventData.startTime,
         hourStart = datetime.millisecondsFrom('hour', dragStartEventData.hourStart) || 0,
         unitData, styleFunc, styleData, result, top, height, start, end;
 
@@ -253,21 +249,14 @@ TimeCreationGuide.prototype._createGuideElement = function(dragStartEventData) {
     unitData = this._styleUnit = this._getUnitData(relatedView);
     styleFunc = this._styleFunc = this._getStyleDataFunc.apply(this, unitData);
     styleData = this._styleStart = styleFunc(dragStartEventData);
+
     start = new TZDate(styleData[1]).addMinutes(datetime.minutesFromHours(hourStart));
     end = new TZDate(styleData[2]).addMinutes(datetime.minutesFromHours(hourStart));
     top = styleData[0];
-
-    // if (customCreationGuideEndTime) {
-    //     customEndTime = new TZDate(end).setHours(new TZDate(customCreationGuideEndTime).getHours());
-    //     customEndTime = new TZDate(customEndTime).setMinutes(new TZDate(customCreationGuideEndTime).getMinutes());
-    // }
-    // if (customCreationGuideStartTime) {
-    //     customStartTime = new TZDate(end).setHours(new TZDate(customCreationGuideStartTime).getHours());
-    //     customStartTime = new TZDate(customEndTime).setMinutes(new TZDate(customCreationGuideStartTime).getMinutes());
-    // }
     end = this._styleStart[2] = new TZDate(end);
     start = this._styleStart[1] = new TZDate(start);
     height = (unitData[4] * (end - start) / MIN60);
+
     result = this._limitStyleData(
         top,
         height,

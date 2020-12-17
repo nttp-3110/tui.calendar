@@ -348,10 +348,12 @@ TimeCreation.prototype._onDragEnd = function (dragEndEventData) {
  */
 TimeCreation.prototype._onMouseMove = function (clickEventData) {
     var self = this,
+        opt = this.timeGridView.options,
         condResult,
         getScheduleDataFunc,
         eventData,
-        customCondResult;
+        customCondResult,
+        rangeTime;
 
     if (this._showCreationGuideOnHover && this._focusInCalendar) {
         this.dragHandler.off({
@@ -368,8 +370,9 @@ TimeCreation.prototype._onMouseMove = function (clickEventData) {
 
         getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
         eventData = getScheduleDataFunc(clickEventData);
+        rangeTime = this._getRangeTime(eventData.nearestGridTimeY, opt);
         if (this._checkExpectedConditionHover) {
-            customCondResult = this._checkExpectedConditionHover(eventData);
+            customCondResult = this._checkExpectedConditionHover(eventData, rangeTime);
             if (!customCondResult) {
                 return;
             }
@@ -416,8 +419,14 @@ TimeCreation.prototype._onMouseLeave = function () { // hoveEvenData
  * @param {object} clickEventData - event data from Drag#click.
  */
 TimeCreation.prototype._onClick = function (clickEventData) {
-    var self = this;
-    var condResult, getScheduleDataFunc, eventData, customCondResult;
+    var self = this,
+        opt = this.timeGridView.options,
+        condResult,
+        getScheduleDataFunc,
+        eventData,
+        customCondResult,
+        rangeTime;
+
     if (this._showCreationGuideOnClick) {
         this.dragHandler.off({
             drag: this._onDrag,
@@ -427,14 +436,14 @@ TimeCreation.prototype._onClick = function (clickEventData) {
         condResult = this.checkExpectedCondition(clickEventData.target);
         if (!condResult || this._disableHover) {
             // self.fire('clearCreationGuide', eventData);
-
             return;
         }
 
         getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
         eventData = getScheduleDataFunc(clickEventData);
+        rangeTime = this._getRangeTime(eventData.nearestGridTimeY, opt);
         if (this._checkExpectedConditionClick) {
-            customCondResult = this._checkExpectedConditionClick(eventData);
+            customCondResult = this._checkExpectedConditionClick(eventData, rangeTime);
             if (!customCondResult) {
                 return;
             }

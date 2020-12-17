@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Wed Dec 16 2020
+ * @version 1.12.11 | Thu Dec 17 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -15699,6 +15699,35 @@ var TZDate = __webpack_require__(/*! ../../common/timezone */ "./src/js/common/t
  * @mixin Time.Core
  */
 var timeCore = {
+    _convertTimeToGridY: function(time, options) {
+        return (time.getHours() - options.hourStart + this._getNearestHour(time.getMinutes(), options.minuteCell, options.ratioHourGridY));
+    },
+    _getDragGridY: function(start, end, options) {
+        var nearestGridY = this._convertTimeToGridY(start, options),
+            nearestGridEndY = this._convertTimeToGridY(end, options);
+
+        if (end.getDate() - start.getDate() >= 1) {
+            nearestGridEndY = options.hourEnd;
+        }
+
+        return ({
+            nearestGridY: nearestGridY,
+            nearestGridTimeY: start,
+            nearestGridEndY: nearestGridEndY,
+            nearestGridEndTimeY: end
+        });
+    },
+    _getRangeTime: function(dateTime, options) {
+        var rangeStart, rangeEnd;
+
+        rangeStart = new TZDate(dateTime);
+        rangeStart.setHours(options.hourStart, 0, 0, 0);
+
+        rangeEnd = new TZDate(dateTime);
+        rangeEnd.setHours(options.hourEnd - 1, 59, 59, 0);
+
+        return this._getDragGridY(rangeStart, rangeEnd, options);
+    },
     /**
      * Get the nearest hour
      * @param {number} minutes - minutes
@@ -15717,13 +15746,13 @@ var timeCore = {
                 var previousElement = ratioHourGridY[i - 1];
                 if (gridY <= element) {
                     return previousElement || 0;
-                }            
+                }
             }
         } else if (direction == 'bottom') {
             return common.nearest(gridY, ratioHourGridY);
         }
         return 0;
-    }, 
+    },
     /**
      * Get Y index ratio(hour) in time grids by supplied parameters.
      * @param {number} baseMil - base milliseconds number for supplied height.
@@ -15738,23 +15767,23 @@ var timeCore = {
             floored = result | 0,
             nearestTop = nearestBy === 1, // top
             nearestBottom = nearestBy === 2, // bottom
-            nearest; 
+            nearest;
 
-            if (nearestTop || nearestBottom) {
-                for (var i = 0; i < options.ratioHourGridY.length; i++) {
-                    var element = options.ratioHourGridY[i];
-                    if ((result - floored) <= element) {
-                        if (nearestTop) {
-                            nearest = options.ratioHourGridY[i - 1] || 0;
-                        } else if (nearestBottom) {
-                            nearest = options.ratioHourGridY[i] || 0;
-                        }
-                        break;
+        if (nearestTop || nearestBottom) {
+            for (var i = 0; i < options.ratioHourGridY.length; i++) {
+                var element = options.ratioHourGridY[i];
+                if ((result - floored) <= element) {
+                    if (nearestTop) {
+                        nearest = options.ratioHourGridY[i - 1] || 0;
+                    } else if (nearestBottom) {
+                        nearest = options.ratioHourGridY[i] || 0;
                     }
+                    break;
                 }
-            } else {
-                nearest = common.nearest(result - floored, options.ratioHourGridY);
             }
+        } else {
+            nearest = common.nearest(result - floored, options.ratioHourGridY);
+        }
         return floored + (nearest || 0);
     },
 
@@ -15786,9 +15815,9 @@ var timeCore = {
                     datetime.minutesFromHours(nearestGridY + options.hourStart)
                 );
 
-                if (nearestGridY == options.hourEnd) {
-                    nearestGridTimeY.addSeconds(-1);
-                }
+            if (nearestGridY == options.hourEnd) {
+                nearestGridTimeY.addSeconds(-1);
+            }
 
             return util.extend({
                 target: mouseEvent.target || mouseEvent.srcElement,
@@ -16224,10 +16253,12 @@ TimeCreation.prototype._onDragEnd = function (dragEndEventData) {
  */
 TimeCreation.prototype._onMouseMove = function (clickEventData) {
     var self = this,
+        opt = this.timeGridView.options,
         condResult,
         getScheduleDataFunc,
         eventData,
-        customCondResult;
+        customCondResult,
+        rangeTime;
 
     if (this._showCreationGuideOnHover && this._focusInCalendar) {
         this.dragHandler.off({
@@ -16244,8 +16275,9 @@ TimeCreation.prototype._onMouseMove = function (clickEventData) {
 
         getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
         eventData = getScheduleDataFunc(clickEventData);
+        rangeTime = this._getRangeTime(eventData.nearestGridTimeY, opt);
         if (this._checkExpectedConditionHover) {
-            customCondResult = this._checkExpectedConditionHover(eventData);
+            customCondResult = this._checkExpectedConditionHover(eventData, rangeTime);
             if (!customCondResult) {
                 return;
             }
@@ -16292,8 +16324,14 @@ TimeCreation.prototype._onMouseLeave = function () { // hoveEvenData
  * @param {object} clickEventData - event data from Drag#click.
  */
 TimeCreation.prototype._onClick = function (clickEventData) {
-    var self = this;
-    var condResult, getScheduleDataFunc, eventData, customCondResult;
+    var self = this,
+        opt = this.timeGridView.options,
+        condResult,
+        getScheduleDataFunc,
+        eventData,
+        customCondResult,
+        rangeTime;
+
     if (this._showCreationGuideOnClick) {
         this.dragHandler.off({
             drag: this._onDrag,
@@ -16303,14 +16341,14 @@ TimeCreation.prototype._onClick = function (clickEventData) {
         condResult = this.checkExpectedCondition(clickEventData.target);
         if (!condResult || this._disableHover) {
             // self.fire('clearCreationGuide', eventData);
-
             return;
         }
 
         getScheduleDataFunc = this._retriveScheduleData(condResult, 1);
         eventData = getScheduleDataFunc(clickEventData);
+        rangeTime = this._getRangeTime(eventData.nearestGridTimeY, opt);
         if (this._checkExpectedConditionClick) {
-            customCondResult = this._checkExpectedConditionClick(eventData);
+            customCondResult = this._checkExpectedConditionClick(eventData, rangeTime);
             if (!customCondResult) {
                 return;
             }
@@ -16521,7 +16559,7 @@ TimeCreationGuide.prototype._clearGuideElement = function() {
 TimeCreationGuide.prototype._refreshGuideElement = function(top, height, start, end, bottomLabel, scheduleData) {
     var guideElement = this.guideElement,
         timeElement = this.guideTimeElement;
-        
+
     guideElement.style.top = top + 'px';
     guideElement.style.height = height + 'px';
     guideElement.style.display = 'block';
@@ -16530,7 +16568,7 @@ TimeCreationGuide.prototype._refreshGuideElement = function(top, height, start, 
         guideElement.innerHTML = this._creationGuideTemplate(start, end);
     } else {
         timeElement.innerHTML = datetime.format(start, 'HH:mm') +
-        ' - ' + datetime.format(end, 'HH:mm');
+            ' - ' + datetime.format(end, 'HH:mm');
     }
 
     if (bottomLabel) {
@@ -16606,15 +16644,13 @@ TimeCreationGuide.prototype._getStyleDataFunc = function(viewHeight, hourLength,
      */
     function getStyleData(scheduleData) {
         // Trick code
-        var minMinutes = scheduleData.delta || 30;
+        var secondsFromStart = scheduleData.delta || 1800; // default 30p
         var gridY = scheduleData.nearestGridY,
             gridTimeY = scheduleData.nearestGridTimeY,
-            gridEndTimeY = scheduleData.nearestGridEndTimeY || new TZDate(gridTimeY).addMinutes(minMinutes),
-            top, startTime, endTime;
-
-        top = common.limit(ratio(hourLength, viewHeight, gridY), [0], [viewHeight]);
-        startTime = common.limitDate(gridTimeY, todayStartTime, todayEndTime);
-        endTime = common.limitDate(gridEndTimeY, todayStartTime, todayEndTime);
+            gridEndTimeY = scheduleData.nearestGridEndTimeY || new TZDate(gridTimeY).addSeconds(secondsFromStart),
+            top = common.limit(ratio(hourLength, viewHeight, gridY), [0], [viewHeight]),
+            startTime = common.limitDate(gridTimeY, todayStartTime, todayEndTime),
+            endTime = common.limitDate(gridEndTimeY, todayStartTime, todayEndTime);
 
         return [top, startTime, endTime];
     }
@@ -16649,8 +16685,6 @@ TimeCreationGuide.prototype._clickGuideElement = function(event) {
  */
 TimeCreationGuide.prototype._createGuideElement = function(dragStartEventData) {
     var relatedView = dragStartEventData.relatedView,
-        // customCreationGuideEndTime = dragStartEventData.endTime,
-        // customCreationGuideStartTime = dragStartEventData.startTime,
         hourStart = datetime.millisecondsFrom('hour', dragStartEventData.hourStart) || 0,
         unitData, styleFunc, styleData, result, top, height, start, end;
 
@@ -16658,21 +16692,14 @@ TimeCreationGuide.prototype._createGuideElement = function(dragStartEventData) {
     unitData = this._styleUnit = this._getUnitData(relatedView);
     styleFunc = this._styleFunc = this._getStyleDataFunc.apply(this, unitData);
     styleData = this._styleStart = styleFunc(dragStartEventData);
+
     start = new TZDate(styleData[1]).addMinutes(datetime.minutesFromHours(hourStart));
     end = new TZDate(styleData[2]).addMinutes(datetime.minutesFromHours(hourStart));
     top = styleData[0];
-
-    // if (customCreationGuideEndTime) {
-    //     customEndTime = new TZDate(end).setHours(new TZDate(customCreationGuideEndTime).getHours());
-    //     customEndTime = new TZDate(customEndTime).setMinutes(new TZDate(customCreationGuideEndTime).getMinutes());
-    // }
-    // if (customCreationGuideStartTime) {
-    //     customStartTime = new TZDate(end).setHours(new TZDate(customCreationGuideStartTime).getHours());
-    //     customStartTime = new TZDate(customEndTime).setMinutes(new TZDate(customCreationGuideStartTime).getMinutes());
-    // }
     end = this._styleStart[2] = new TZDate(end);
     start = this._styleStart[1] = new TZDate(start);
     height = (unitData[4] * (end - start) / MIN60);
+
     result = this._limitStyleData(
         top,
         height,
@@ -17699,7 +17726,6 @@ module.exports = TimeMoveGuide;
 
 var util = __webpack_require__(/*! tui-code-snippet */ "tui-code-snippet");
 var config = __webpack_require__(/*! ../../config */ "./src/js/config.js");
-var datetime = __webpack_require__(/*! ../../common/datetime */ "./src/js/common/datetime.js");
 var domutil = __webpack_require__(/*! ../../common/domutil */ "./src/js/common/domutil.js");
 var TZDate = __webpack_require__(/*! ../../common/timezone */ "./src/js/common/timezone.js").Date;
 var common = __webpack_require__(/*! ../../common/common */ "./src/js/common/common.js");
@@ -17746,7 +17772,7 @@ function TimeResize(dragHandler, timeGridView, baseController, options) {
 
     this._dragStartDirection = null;
 
-    this._gridStop = null;
+    this._secondsChange = null;
 
     this._currentGridY = null;
 
@@ -17822,37 +17848,6 @@ TimeResize.prototype.checkExpectCondition = function (target) {
     return util.pick(this.timeGridView.children.items, Number(matches[1]));
 };
 
-TimeResize.prototype._convertTimeToGridY = function (time) {
-    var opt = this.timeGridView.options;
-    return (time.getHours() - opt.hourStart + this._getNearestHour(time.getMinutes(), opt.minuteCell, opt.ratioHourGridY));
-}
-
-TimeResize.prototype._checkRangeGridY = function (gridY) {
-    var newGridY = gridY;
-    newGridY = Math.max(newGridY, this._rangeTime.nearestGridY);
-    newGridY = Math.min(newGridY, this._rangeTime.nearestGridEndY);
-    return newGridY;
-}
-
-TimeResize.prototype._getDragGridY = function (start, end) {
-    var opt = this.timeGridView.options,
-        nearestGridY = this._convertTimeToGridY(start),
-        nearestGridEndY = this._convertTimeToGridY(end),
-        dragGridY;
-
-    if (end.getDate() - start.getDate() >= 1) {
-        nearestGridEndY = opt.hourEnd;
-    }
-    dragGridY = {
-        nearestGridY: nearestGridY,
-        nearestGridTimeY: start,
-        nearestGridEndY: nearestGridEndY,
-        nearestGridEndTimeY: end
-    };
-
-    return dragGridY;
-}
-
 /**
  * @emits TimeResize#timeResizeDragstart
  * @param {object} dragStartEventData - event data of Drag#dragstart
@@ -17868,8 +17863,6 @@ TimeResize.prototype._onDragStart = function (dragStartEventData) {
         targetModelID,
         scheduleData,
         schedule,
-        rangeStart,
-        rangeEnd,
         dragGridRange;
 
     if (!timeView || !blockElement) {
@@ -17883,7 +17876,7 @@ TimeResize.prototype._onDragStart = function (dragStartEventData) {
         return;
     }
 
-    dragGridRange = this._getDragGridY(schedule.start, schedule.end);
+    dragGridRange = this._getDragGridY(schedule.start, schedule.end, opt);
 
     if (domutil.hasClass(target, config.classname('time-top-resize-handle'))) {
         this._dragStartDirection = 'top';
@@ -17905,16 +17898,7 @@ TimeResize.prototype._onDragStart = function (dragStartEventData) {
         }
     }
 
-    targetModelID = domutil.getData(blockElement, 'id');
-    schedule = ctrl.schedules.items[targetModelID];
-
-    rangeStart = new TZDate(dragGridRange.nearestGridTimeY);
-    rangeStart.setHours(opt.hourStart, 0, 0, 0);
-
-    rangeEnd = new TZDate(dragGridRange.nearestGridTimeY);
-    rangeEnd.setHours(opt.hourEnd - 1, 59, 59, 0);
-
-    this._rangeTime = this._getDragGridY(rangeStart, rangeEnd);
+    this._rangeTime = this._getRangeTime(dragGridRange.nearestGridTimeY, opt);
 
     scheduleData = this._dragStart = getScheduleDataFunc(
         dragStartEventData.originEvent, {
@@ -17945,7 +17929,7 @@ TimeResize.prototype._onDragStart = function (dragStartEventData) {
      * @property {Schedule} schedule - schedule data
      */
     this.fire('timeResizeDragstart', scheduleData);
-    this._gridStop = null;
+    this._secondsChange = null;
 };
 
 /**
@@ -17971,7 +17955,7 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
     }
 
     schedule = this._dragStart.schedule;
-    dragGridRange = this._getDragGridY(schedule.start, schedule.end);
+    dragGridRange = this._getDragGridY(schedule.start, schedule.end, opt);
     gridStartY = dragGridRange.nearestGridY;
     gridEndY = dragGridRange.nearestGridEndY;
 
@@ -17994,9 +17978,9 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
             customCondResult = this._checkExpectedConditionResize(scheduleData, this._dragStartDirection, dragGridRange, this._rangeTime, schedule);
             if (typeof customCondResult === 'boolean') {
                 if (customCondResult) {
-                    this._gridStop = null;
+                    this._secondsChange = null;
                 } else {
-                    this._gridStop = 0;
+                    this._secondsChange = 0;
                     if (topDirection) {
                         scheduleData.nearestGridY = dragGridRange.nearestGridY;
                     } else if (bottomDirection) {
@@ -18004,10 +17988,10 @@ TimeResize.prototype._onDrag = function (dragEventData, overrideEventName, revis
                     }
                 }
             } else if (util.isNumber(customCondResult)) {
-                this._gridStop = customCondResult;
+                this._secondsChange = customCondResult;
                 var timeFromInitialStart = new TZDate(dragGridRange.nearestGridTimeY);
-                timeFromInitialStart.addMinutes(this._gridStop);
-                scheduleData.nearestGridY = this._convertTimeToGridY(timeFromInitialStart);
+                timeFromInitialStart.addSeconds(this._secondsChange);
+                scheduleData.nearestGridY = this._convertTimeToGridY(timeFromInitialStart, opt);
             }
         }
 
@@ -18061,8 +18045,7 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
         return;
     }
 
-    schedule = this._dragStart.schedule;
-    dragGridRange = this._getDragGridY(schedule.start, schedule.end);
+    dragGridRange = this._getDragGridY(this._dragStart.schedule.start, this._dragStart.schedule.end, opt);
     gridStartTimeY = dragGridRange.nearestGridTimeY;
 
     scheduleData = this._getScheduleDataFunc(dragEndEventData.originEvent, {
@@ -18071,34 +18054,17 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
 
     schedule = this.baseController.schedules.items[scheduleData.targetModelID];
 
-    if (util.isNumber(this._gridStop)) {
+    if (util.isNumber(this._secondsChange)) {
         var newNearestGridTimeY;
 
         newNearestGridTimeY = new TZDate(gridStartTimeY);
-        newNearestGridTimeY.addMinutes(this._gridStop);
+        newNearestGridTimeY.addSeconds(this._secondsChange);
 
-        scheduleData.gridY = scheduleData.nearestGridY = this._convertTimeToGridY(newNearestGridTimeY);
+        scheduleData.gridY = scheduleData.nearestGridY = this._convertTimeToGridY(newNearestGridTimeY, opt);
         scheduleData.nearestGridTimeY = newNearestGridTimeY;
-
     }
-    // else if (util.isObject(this._gridStop)) {
-    //     var newNearestGridTimeY,
-    //         hoursChange = opt.hourStart + parseInt(this._gridStop.nearestGridY, 10),
-    //         minutesChange = Math.round(datetime.minutesFromHours(this._gridStop.nearestGridY % 1)),
-    //         secondsChange = 0,
-    //         millisecondsChange = 0;
 
-    //     hoursChange = hoursChange == 24 ? 0 : hoursChange;
-
-
-    //     newNearestGridTimeY = new TZDate(gridStartTimeY);
-    //     newNearestGridTimeY.setHours(hoursChange, minutesChange, secondsChange, millisecondsChange);
-
-    //     scheduleData.gridY = scheduleData.nearestGridY = this._gridStop.nearestGridY;
-    //     scheduleData.nearestGridTimeY = newNearestGridTimeY;
-    // }
-
-    if (this._gridStop == 0) {
+    if (this._secondsChange == 0) {
         scheduleData.newTime = null;
     } else if (topDirection) {
         scheduleData.newTime = {
@@ -18112,6 +18078,12 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
         };
     }
 
+    if (scheduleData.newTime) {
+        scheduleData.nearestGridY = this._convertTimeToGridY(scheduleData.newTime.start, opt);
+        scheduleData.nearestGridTimeY = scheduleData.newTime.start;
+        scheduleData.nearestGridEndY = this._convertTimeToGridY(scheduleData.newTime.end, opt);
+        scheduleData.nearestGridEndTimeY = scheduleData.newTime.end;
+    }
 
     this._updateSchedule(scheduleData);
 
@@ -18137,7 +18109,7 @@ TimeResize.prototype._onDragEnd = function (dragEndEventData) {
         hover: false
     }
 
-    this._getScheduleDataFunc = this._dragStart = this._gridStop = this._currentGridY = this._rangeTime = this._dragStartDirection = null;
+    this._getScheduleDataFunc = this._dragStart = this._secondsChange = this._currentGridY = this._rangeTime = this._dragStartDirection = null;
 };
 
 /**
@@ -18204,6 +18176,7 @@ timeCore.mixin(TimeResize);
 util.CustomEvents.mixin(TimeResize);
 
 module.exports = TimeResize;
+
 
 /***/ }),
 
@@ -18333,13 +18306,13 @@ TimeResizeGuide.prototype._refreshGuideElement = function (guideTop, guideHeight
 
     reqAnimFrame.requestAnimFrame(function () {
         if (guideTop !== null) {
-            guideElement.style.top = guideTop + 2 + 'px';
+            guideElement.style.top = guideTop + 'px';
         }
         guideElement.style.height = guideHeight + 'px';
         guideElement.style.display = 'block';
 
         if (timeElement) {
-            timeElement.style.height = guideHeight + 2 + 'px';
+            timeElement.style.height = guideHeight + 'px';
             timeElement.style.minHeight = guideHeight + 'px';
         }
     });
@@ -18385,13 +18358,16 @@ TimeResizeGuide.prototype._onDragStart = function (dragStartEventData) {
 TimeResizeGuide.prototype._onDrag = function (dragEventData) {
 
     var timeView = dragEventData.relatedView,
+        classTimeGridContainer = config.classname('.timegrid-schedules-container'),
+        timeGridContainer = this.timeResize.timeGridView.container,
         viewOptions = timeView.options,
-        viewHeight = timeView.getViewBound().height,
+        // viewHeight = timeView.getViewBound().height,
+        viewHeight = domutil.getSize(domutil.find(classTimeGridContainer, timeGridContainer).parentElement)[1],
         hourLength = viewOptions.hourEnd - viewOptions.hourStart,
         guideElement = this.guideElement,
         gridYOffset = dragEventData.nearestGridY - this._startGridY,
         gridYOffsetPixel = ratio(hourLength, viewHeight, gridYOffset),
-        gridRange = this.timeResize._getDragGridY(this._dragStart.schedule.start, this._dragStart.schedule.end),
+        gridRange = this.timeResize._getDragGridY(this._dragStart.schedule.start, this._dragStart.schedule.end, viewOptions),
         guideTop,
         minTop,
         maxTop,
@@ -18407,7 +18383,7 @@ TimeResizeGuide.prototype._onDrag = function (dragEventData) {
         } else {
             maxTop = gridRange.nearestGridEndY - viewOptions.ratioHourGridY[1];
         }
-        
+
         guideTop = dragEventData.nearestGridY;
         guideTop = Math.max(guideTop, minTop);
         guideTop = Math.min(guideTop, maxTop);
@@ -18423,7 +18399,7 @@ TimeResizeGuide.prototype._onDrag = function (dragEventData) {
         maxHeight = viewHeight - guideTop;
 
         // height = this._startHeightPixel + ratio(hourLength, viewHeight, dragEventData.nearestGridY - this._startGridY);
-        height = ((dragEventData.nearestGridY - dragEventData.gridStartY) * viewHeight) / hourLength;
+        height = ratio(hourLength, viewHeight, dragEventData.nearestGridY - dragEventData.gridStartY);
 
         height = Math.max(height, minHeight);
         height = Math.min(height, maxHeight);
@@ -25747,6 +25723,7 @@ var config = __webpack_require__(/*! ../../config */ "./src/js/config.js");
 var datetime = __webpack_require__(/*! ../../common/datetime */ "./src/js/common/datetime.js");
 var domutil = __webpack_require__(/*! ../../common/domutil */ "./src/js/common/domutil.js");
 var domevent = __webpack_require__(/*! ../../common/domevent */ "./src/js/common/domevent.js");
+var timeCore = __webpack_require__(/*! ../../handler/time/core */ "./src/js/handler/time/core.js");
 var View = __webpack_require__(/*! ../view */ "./src/js/view/view.js");
 var timeTmpl = __webpack_require__(/*! ../template/week/time.hbs */ "./src/js/view/template/week/time.hbs");
 var timeBackgroundTmpl = __webpack_require__(/*! ../template/week/timeBackground.hbs */ "./src/js/view/template/week/timeBackground.hbs");
@@ -25856,6 +25833,10 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
     var goingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().goingDuration);
     var comingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().comingDuration);
     var offsetStart = viewModel.valueOf().start - goingDuration - options.todayStart;
+    var dragGridY = this._getDragGridY(viewModel.model.start, viewModel.model.end, this.options),
+        offsetGridY = dragGridY.nearestGridEndY - dragGridY.nearestGridY,
+        hourHeight = baseHeight / (this.options.hourEnd - this.options.hourStart);
+    
     // containerHeight : milliseconds in day = x : schedule's milliseconds
     var top = (baseHeight * offsetStart) / baseMS;
     var modelDuration = viewModel.duration();
@@ -25884,9 +25865,11 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
         croppedEnd = true;
     }
 
+    height = offsetGridY * hourHeight;
+
     return {
         top: top,
-        height: Math.max(height, this.options.minHeight) - this.options.defaultMarginBottom,
+        height: height,
         modelDurationHeight: modelDurationHeight,
         goingDurationHeight: goingDurationHeight,
         comingDurationHeight: comingDurationHeight,
@@ -26021,12 +26004,12 @@ Time.prototype.render = function(ymd, matrices, containerHeight) {
         var eleId = 'schedule-content-' + element.model.id;
         var domEle = document.getElementById(eleId);
         if (self.options.onMouseEnterScheduleItem) {
-            domevent.on(domEle, 'mouseenter', function(evt) { 
+            domevent.on(domEle, 'mouseenter', function(evt) {
                 self.options.onMouseEnterScheduleItem(evt, domEle, element.model);
             }, self);
         }
         if (self.options.onMouseLeaveScheduleItem) {
-            domevent.on(domEle, 'mouseleave', function(evt) { 
+            domevent.on(domEle, 'mouseleave', function(evt) {
                 self.options.onMouseLeaveScheduleItem(evt, domEle, element.model);
             }, self);
         }
@@ -26076,6 +26059,8 @@ Time.prototype.applyTheme = function() {
     style.backgroundColor = styles.backgroundColor;
 };
 
+timeCore.mixin(Time);
+
 module.exports = Time;
 
 
@@ -26103,6 +26088,7 @@ var domevent = __webpack_require__(/*! ../../common/domevent */ "./src/js/common
 var datetime = __webpack_require__(/*! ../../common/datetime */ "./src/js/common/datetime.js");
 var Timezone = __webpack_require__(/*! ../../common/timezone */ "./src/js/common/timezone.js");
 var reqAnimFrame = __webpack_require__(/*! ../../common/reqAnimFrame */ "./src/js/common/reqAnimFrame.js");
+var timeCore = __webpack_require__(/*! ../../handler/time/core */ "./src/js/handler/time/core.js");
 var View = __webpack_require__(/*! ../view */ "./src/js/view/view.js");
 var Time = __webpack_require__(/*! ./time */ "./src/js/view/week/time.js");
 var AutoScroll = __webpack_require__(/*! ../../common/autoScroll */ "./src/js/common/autoScroll.js");
@@ -26455,7 +26441,7 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
             lastTimeSlot,
             shiftByOffset = parseInt(timezone.timezoneOffset / SIXTY_MINUTES, 10),
             nowHours = common.shiftHours(now.getHours(), shiftByOffset) % 24;
-            
+
         timezoneDifference = timezone.timezoneOffset + primaryOffset;
         timeSlots = getHoursLabels(opt, currentHours >= 0, timezoneDifference, styles);
         lastTimeSlot = timeSlots[timeSlots.length - 1];
@@ -26468,7 +26454,7 @@ TimeGrid.prototype._getTimezoneViewModel = function(currentHours, timezonesColla
                 fontWeight: lastTimeSlot.fontWeight,
                 hidden: lastTimeSlot.hour + 1 == nowHours,
                 isEndTime: true
-            });            
+            });
         }
 
         hourmarker.setMinutes(hourmarker.getMinutes() + timezoneDifference);
@@ -26550,7 +26536,7 @@ TimeGrid.prototype._renderChildren = function(viewModels, grids, container, them
         var isDueDate = Number(ymd) == Number(datetime.format(new TZDate(options.disabledGrid.hourDisabled), 'YYYYMMDD'));
         isToday = ymd === today;
         isDisableGrid = options.disabledGrid.hourDisabled && Number(ymd) >= Number(datetime.format(new TZDate(options.disabledGrid.hourDisabled), 'YYYYMMDD'));
-        ratioByHourDisabled = 0;    
+        ratioByHourDisabled = 0;
         elementDisabled = null;
         if (isDueDate) {
             ratioByHourDisabled = (hourDisabled - options.hourStart) + (minuteDisabled / 60);
@@ -26903,6 +26889,8 @@ TimeGrid.prototype._onClickStickyContainer = function(event) {
 
     this.fire('clickTimezonesCollapsedBtn');
 };
+
+timeCore.mixin(TimeGrid);
 
 module.exports = TimeGrid;
 

@@ -116,13 +116,13 @@ TimeResizeGuide.prototype._refreshGuideElement = function (guideTop, guideHeight
 
     reqAnimFrame.requestAnimFrame(function () {
         if (guideTop !== null) {
-            guideElement.style.top = guideTop + 2 + 'px';
+            guideElement.style.top = guideTop + 'px';
         }
         guideElement.style.height = guideHeight + 'px';
         guideElement.style.display = 'block';
 
         if (timeElement) {
-            timeElement.style.height = guideHeight + 2 + 'px';
+            timeElement.style.height = guideHeight + 'px';
             timeElement.style.minHeight = guideHeight + 'px';
         }
     });
@@ -168,13 +168,16 @@ TimeResizeGuide.prototype._onDragStart = function (dragStartEventData) {
 TimeResizeGuide.prototype._onDrag = function (dragEventData) {
 
     var timeView = dragEventData.relatedView,
+        classTimeGridContainer = config.classname('.timegrid-schedules-container'),
+        timeGridContainer = this.timeResize.timeGridView.container,
         viewOptions = timeView.options,
-        viewHeight = timeView.getViewBound().height,
+        // viewHeight = timeView.getViewBound().height,
+        viewHeight = domutil.getSize(domutil.find(classTimeGridContainer, timeGridContainer).parentElement)[1],
         hourLength = viewOptions.hourEnd - viewOptions.hourStart,
         guideElement = this.guideElement,
         gridYOffset = dragEventData.nearestGridY - this._startGridY,
         gridYOffsetPixel = ratio(hourLength, viewHeight, gridYOffset),
-        gridRange = this.timeResize._getDragGridY(this._dragStart.schedule.start, this._dragStart.schedule.end),
+        gridRange = this.timeResize._getDragGridY(this._dragStart.schedule.start, this._dragStart.schedule.end, viewOptions),
         guideTop,
         minTop,
         maxTop,
@@ -190,7 +193,7 @@ TimeResizeGuide.prototype._onDrag = function (dragEventData) {
         } else {
             maxTop = gridRange.nearestGridEndY - viewOptions.ratioHourGridY[1];
         }
-        
+
         guideTop = dragEventData.nearestGridY;
         guideTop = Math.max(guideTop, minTop);
         guideTop = Math.min(guideTop, maxTop);
@@ -206,7 +209,7 @@ TimeResizeGuide.prototype._onDrag = function (dragEventData) {
         maxHeight = viewHeight - guideTop;
 
         // height = this._startHeightPixel + ratio(hourLength, viewHeight, dragEventData.nearestGridY - this._startGridY);
-        height = ((dragEventData.nearestGridY - dragEventData.gridStartY) * viewHeight) / hourLength;
+        height = ratio(hourLength, viewHeight, dragEventData.nearestGridY - dragEventData.gridStartY);
 
         height = Math.max(height, minHeight);
         height = Math.min(height, maxHeight);

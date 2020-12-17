@@ -9,6 +9,7 @@ var config = require('../../config');
 var datetime = require('../../common/datetime');
 var domutil = require('../../common/domutil');
 var domevent = require('../../common/domevent');
+var timeCore = require('../../handler/time/core');
 var View = require('../view');
 var timeTmpl = require('../template/week/time.hbs');
 var timeBackgroundTmpl = require('../template/week/timeBackground.hbs');
@@ -118,6 +119,10 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
     var goingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().goingDuration);
     var comingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().comingDuration);
     var offsetStart = viewModel.valueOf().start - goingDuration - options.todayStart;
+    var dragGridY = this._getDragGridY(viewModel.model.start, viewModel.model.end, this.options),
+        offsetGridY = dragGridY.nearestGridEndY - dragGridY.nearestGridY,
+        hourHeight = baseHeight / (this.options.hourEnd - this.options.hourStart);
+    
     // containerHeight : milliseconds in day = x : schedule's milliseconds
     var top = (baseHeight * offsetStart) / baseMS;
     var modelDuration = viewModel.duration();
@@ -146,9 +151,11 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
         croppedEnd = true;
     }
 
+    height = offsetGridY * hourHeight;
+
     return {
         top: top,
-        height: Math.max(height, this.options.minHeight) - this.options.defaultMarginBottom,
+        height: height,
         modelDurationHeight: modelDurationHeight,
         goingDurationHeight: goingDurationHeight,
         comingDurationHeight: comingDurationHeight,
@@ -283,12 +290,12 @@ Time.prototype.render = function(ymd, matrices, containerHeight) {
         var eleId = 'schedule-content-' + element.model.id;
         var domEle = document.getElementById(eleId);
         if (self.options.onMouseEnterScheduleItem) {
-            domevent.on(domEle, 'mouseenter', function(evt) { 
+            domevent.on(domEle, 'mouseenter', function(evt) {
                 self.options.onMouseEnterScheduleItem(evt, domEle, element.model);
             }, self);
         }
         if (self.options.onMouseLeaveScheduleItem) {
-            domevent.on(domEle, 'mouseleave', function(evt) { 
+            domevent.on(domEle, 'mouseleave', function(evt) {
                 self.options.onMouseLeaveScheduleItem(evt, domEle, element.model);
             }, self);
         }
@@ -337,5 +344,7 @@ Time.prototype.applyTheme = function() {
     style.borderRight = styles.borderRight;
     style.backgroundColor = styles.backgroundColor;
 };
+
+timeCore.mixin(Time);
 
 module.exports = Time;

@@ -15,6 +15,35 @@ var TZDate = require('../../common/timezone').Date;
  * @mixin Time.Core
  */
 var timeCore = {
+    _convertTimeToGridY: function(time, options) {
+        return (time.getHours() - options.hourStart + this._getNearestHour(time.getMinutes(), options.minuteCell, options.ratioHourGridY));
+    },
+    _getDragGridY: function(start, end, options) {
+        var nearestGridY = this._convertTimeToGridY(start, options),
+            nearestGridEndY = this._convertTimeToGridY(end, options);
+
+        if (end.getDate() - start.getDate() >= 1) {
+            nearestGridEndY = options.hourEnd;
+        }
+
+        return ({
+            nearestGridY: nearestGridY,
+            nearestGridTimeY: start,
+            nearestGridEndY: nearestGridEndY,
+            nearestGridEndTimeY: end
+        });
+    },
+    _getRangeTime: function(dateTime, options) {
+        var rangeStart, rangeEnd;
+
+        rangeStart = new TZDate(dateTime);
+        rangeStart.setHours(options.hourStart, 0, 0, 0);
+
+        rangeEnd = new TZDate(dateTime);
+        rangeEnd.setHours(options.hourEnd - 1, 59, 59, 0);
+
+        return this._getDragGridY(rangeStart, rangeEnd, options);
+    },
     /**
      * Get the nearest hour
      * @param {number} minutes - minutes
@@ -33,13 +62,13 @@ var timeCore = {
                 var previousElement = ratioHourGridY[i - 1];
                 if (gridY <= element) {
                     return previousElement || 0;
-                }            
+                }
             }
         } else if (direction == 'bottom') {
             return common.nearest(gridY, ratioHourGridY);
         }
         return 0;
-    }, 
+    },
     /**
      * Get Y index ratio(hour) in time grids by supplied parameters.
      * @param {number} baseMil - base milliseconds number for supplied height.
@@ -54,23 +83,23 @@ var timeCore = {
             floored = result | 0,
             nearestTop = nearestBy === 1, // top
             nearestBottom = nearestBy === 2, // bottom
-            nearest; 
+            nearest;
 
-            if (nearestTop || nearestBottom) {
-                for (var i = 0; i < options.ratioHourGridY.length; i++) {
-                    var element = options.ratioHourGridY[i];
-                    if ((result - floored) <= element) {
-                        if (nearestTop) {
-                            nearest = options.ratioHourGridY[i - 1] || 0;
-                        } else if (nearestBottom) {
-                            nearest = options.ratioHourGridY[i] || 0;
-                        }
-                        break;
+        if (nearestTop || nearestBottom) {
+            for (var i = 0; i < options.ratioHourGridY.length; i++) {
+                var element = options.ratioHourGridY[i];
+                if ((result - floored) <= element) {
+                    if (nearestTop) {
+                        nearest = options.ratioHourGridY[i - 1] || 0;
+                    } else if (nearestBottom) {
+                        nearest = options.ratioHourGridY[i] || 0;
                     }
+                    break;
                 }
-            } else {
-                nearest = common.nearest(result - floored, options.ratioHourGridY);
             }
+        } else {
+            nearest = common.nearest(result - floored, options.ratioHourGridY);
+        }
         return floored + (nearest || 0);
     },
 
@@ -102,9 +131,9 @@ var timeCore = {
                     datetime.minutesFromHours(nearestGridY + options.hourStart)
                 );
 
-                if (nearestGridY == options.hourEnd) {
-                    nearestGridTimeY.addSeconds(-1);
-                }
+            if (nearestGridY == options.hourEnd) {
+                nearestGridTimeY.addSeconds(-1);
+            }
 
             return util.extend({
                 target: mouseEvent.target || mouseEvent.srcElement,
