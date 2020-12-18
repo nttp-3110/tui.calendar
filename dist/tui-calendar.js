@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Thu Dec 17 2020
+ * @version 1.12.11 | Fri Dec 18 2020
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -16253,12 +16253,18 @@ TimeCreation.prototype._onDragEnd = function (dragEndEventData) {
  */
 TimeCreation.prototype._onMouseMove = function (clickEventData) {
     var self = this,
-        opt = this.timeGridView.options,
+        opt,
         condResult,
         getScheduleDataFunc,
         eventData,
         customCondResult,
         rangeTime;
+
+    if (!this.timeGridView) {
+        return;
+    }
+
+    opt = this.timeGridView.options;
 
     if (this._showCreationGuideOnHover && this._focusInCalendar) {
         this.dragHandler.off({

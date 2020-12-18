@@ -348,12 +348,18 @@ TimeCreation.prototype._onDragEnd = function (dragEndEventData) {
  */
 TimeCreation.prototype._onMouseMove = function (clickEventData) {
     var self = this,
-        opt = this.timeGridView.options,
+        opt,
         condResult,
         getScheduleDataFunc,
         eventData,
         customCondResult,
         rangeTime;
+
+    if (!this.timeGridView) {
+        return;
+    }
+
+    opt = this.timeGridView.options;
 
     if (this._showCreationGuideOnHover && this._focusInCalendar) {
         this.dragHandler.off({
