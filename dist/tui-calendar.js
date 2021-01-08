@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Fri Dec 18 2020
+ * @version 1.12.11 | Fri Jan 08 2021
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -16362,16 +16362,12 @@ TimeCreation.prototype._onClick = function (clickEventData) {
         eventData.endTime = customCondResult.endTime;
         eventData.delta = customCondResult.delta;
         eventData.template = this._creationGuideTemplate;
-        this._requestOnClick = true;
-        setTimeout(function () {
-            if (self._requestOnClick) {
-                self.fire('timeCreationClick', eventData);
-                self._createSchedule(eventData);
-                // trigger click guide element
-                self.guide._clickGuideElement(self.guide.guideElement.getBoundingClientRect());
-            }
-            self._requestOnClick = false;
-        }, this.CLICK_DELAY);
+
+        self.fire('timeCreationClick', eventData);
+        self._createSchedule(eventData);
+        // trigger click guide element
+        self.guide._clickGuideElement(self.guide.guideElement.getBoundingClientRect());
+
         this._dragStart = this._getScheduleDataFunc = null;
     }
 };
