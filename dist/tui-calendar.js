@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Fri Dec 18 2020
+ * @version 1.12.11 | Fri Feb 19 2021
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -15824,7 +15824,7 @@ var timeCore = {
                 relatedView: timeView,
                 originEvent: mouseEvent,
                 mouseY: mouseY,
-                gridY: gridY,
+                gridY: +gridY.toFixed(2),
                 timeY: timeY,
                 nearestGridY: nearestGridY,
                 nearestGridTimeY: nearestGridTimeY,
@@ -16012,8 +16012,8 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
 
     this.CLICK_DELAY = (options.timeDelay && options.timeDelay.click) || 300;
 
-    dragHandler.on('dragStart', this._onDragStart, this);
-    dragHandler.on('click', this._onClick, this);
+    // dragHandler.on('dragStart', this._onDragStart, this);
+    // dragHandler.on('click', this._onClick, this);
 
     domevent.on(timeGridView.container, 'click', this._onClick, this);
 
@@ -16283,13 +16283,13 @@ TimeCreation.prototype._onMouseMove = function (clickEventData) {
         eventData = getScheduleDataFunc(clickEventData);
         rangeTime = this._getRangeTime(eventData.nearestGridTimeY, opt);
         if (this._checkExpectedConditionHover) {
-            customCondResult = this._checkExpectedConditionHover(eventData, rangeTime);
+            customCondResult = this._checkExpectedConditionHover(clickEventData, eventData, rangeTime);
             if (!customCondResult) {
                 return;
             }
         }
-        eventData.endTime = customCondResult.endTime;
         eventData.delta = customCondResult.delta;
+        customCondResult.nearestGridTimeY && (eventData.nearestGridTimeY = customCondResult.nearestGridTimeY);
         eventData.template = this._creationGuideTemplate;
         this._requestOnHover = true;
         if (self._requestOnHover) {
@@ -16354,13 +16354,13 @@ TimeCreation.prototype._onClick = function (clickEventData) {
         eventData = getScheduleDataFunc(clickEventData);
         rangeTime = this._getRangeTime(eventData.nearestGridTimeY, opt);
         if (this._checkExpectedConditionClick) {
-            customCondResult = this._checkExpectedConditionClick(eventData, rangeTime);
+            customCondResult = this._checkExpectedConditionClick(clickEventData, eventData, rangeTime);
             if (!customCondResult) {
                 return;
             }
         }
-        eventData.endTime = customCondResult.endTime;
         eventData.delta = customCondResult.delta;
+        customCondResult.nearestGridTimeY && (eventData.nearestGridTimeY = customCondResult.nearestGridTimeY);
         eventData.template = this._creationGuideTemplate;
         this._requestOnClick = true;
         setTimeout(function () {

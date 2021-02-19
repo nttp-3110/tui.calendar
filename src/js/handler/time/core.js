@@ -140,7 +140,7 @@ var timeCore = {
                 relatedView: timeView,
                 originEvent: mouseEvent,
                 mouseY: mouseY,
-                gridY: gridY,
+                gridY: +gridY.toFixed(2),
                 timeY: timeY,
                 nearestGridY: nearestGridY,
                 nearestGridTimeY: nearestGridTimeY,
