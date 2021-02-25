@@ -108,9 +108,9 @@ function TimeCreation(dragHandler, timeGridView, baseController, options) {
     this.CLICK_DELAY = (options.timeDelay && options.timeDelay.click) || 300;
 
     // dragHandler.on('dragStart', this._onDragStart, this);
-    // dragHandler.on('click', this._onClick, this);
+    dragHandler.on('click', this._onClick, this);
 
-    domevent.on(timeGridView.container, 'click', this._onClick, this);
+    // domevent.on(timeGridView.container, 'click', this._onClick, this);
 
     var self = this,
         onHoverDelay = util.debounce(function (evt) {
