@@ -12,6 +12,7 @@ var domevent = require('../../common/domevent');
 var reqAnimFrame = require('../../common/reqAnimFrame');
 var ratio = require('../../common/common').ratio;
 var TZDate = require('../../common/timezone').Date;
+var timeCore = require('./core');
 var MIN60 = (datetime.MILLISECONDS_PER_MINUTES * 60);
 
 /**
@@ -191,8 +192,10 @@ TimeCreationGuide.prototype._limitStyleData = function(top, height, start, end, 
  * @returns {function} UI data calculator function
  */
 TimeCreationGuide.prototype._getStyleDataFunc = function(viewHeight, hourLength, todayStart) {
+    var self = this;
     var todayStartTime = todayStart;
     var todayEndTime = datetime.end(todayStart);
+    var opt = self.timeCreation.timeGridView.options;
 
     /**
      * Get top, time value from schedule data
@@ -202,7 +205,7 @@ TimeCreationGuide.prototype._getStyleDataFunc = function(viewHeight, hourLength,
     function getStyleData(scheduleData) {
         // Trick code
         var secondsFromStart = scheduleData.delta || 1800; // default 30p
-        var gridY = scheduleData.nearestGridY,
+        var gridY = self._convertTimeToGridY(new TZDate(scheduleData.nearestGridTimeY), opt),
             gridTimeY = scheduleData.nearestGridTimeY,
             gridEndTimeY = scheduleData.nearestGridEndTimeY || new TZDate(gridTimeY).addSeconds(secondsFromStart),
             top = common.limit(ratio(hourLength, viewHeight, gridY), [0], [viewHeight]),
@@ -326,5 +329,7 @@ TimeCreationGuide.prototype.applyTheme = function(theme) {
     timeStyle.fontSize = theme.week.creationGuide.fontSize;
     timeStyle.fontWeight = theme.week.creationGuide.fontWeight;
 };
+
+timeCore.mixin(TimeCreationGuide);
 
 module.exports = TimeCreationGuide;
