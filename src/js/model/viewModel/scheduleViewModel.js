@@ -7,8 +7,6 @@
 var util = require('tui-code-snippet');
 var datetime = require('../../common/datetime');
 
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
-
 /**
  * Schedule ViewModel
  * @constructor
@@ -173,6 +171,7 @@ ScheduleViewModel.prototype.duration = function() {
  * @returns {boolean} Schedule#collidesWith result.
  */
 ScheduleViewModel.prototype.collidesWith = function(viewModel) {
+    var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
     var ownStarts = this.getStarts(),
         ownEnds = this.getEnds(),
         start = viewModel.getStarts(),
@@ -182,12 +181,12 @@ ScheduleViewModel.prototype.collidesWith = function(viewModel) {
         goingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().goingDuration),
         comingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().comingDuration);
 
-    if (Math.abs(ownEnds - ownStarts) < SCHEDULE_MIN_DURATION) {
-        ownEnds += SCHEDULE_MIN_DURATION;
+    if (Math.abs(ownEnds - ownStarts) < scheduleMinDuration) {
+        ownEnds += scheduleMinDuration;
     }
 
-    if (Math.abs(end - start) < SCHEDULE_MIN_DURATION) {
-        end += SCHEDULE_MIN_DURATION;
+    if (Math.abs(end - start) < scheduleMinDuration) {
+        end += scheduleMinDuration;
     }
 
     ownStarts -= ownGoingDuration;

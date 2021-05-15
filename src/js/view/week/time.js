@@ -15,7 +15,6 @@ var timeTmpl = require('../template/week/time.hbs');
 var timeBackgroundTmpl = require('../template/week/timeBackground.hbs');
 
 var forEachArr = util.forEachArray;
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
 
 /**
  * @constructor
@@ -112,6 +111,7 @@ Time.prototype._getScheduleViewBoundX = function(viewModel, options) {
  * @returns {object} - left and width
  */
 Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
+    var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
     var baseMS = options.baseMS;
     var baseHeight = options.baseHeight;
     var croppedStart = false;
@@ -122,7 +122,7 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
     var dragGridY = this._getDragGridY(viewModel.model.start, viewModel.model.end, this.options),
         offsetGridY = dragGridY.nearestGridEndY - dragGridY.nearestGridY,
         hourHeight = baseHeight / (this.options.hourEnd - this.options.hourStart);
-    
+
     // containerHeight : milliseconds in day = x : schedule's milliseconds
     var top = (baseHeight * offsetStart) / baseMS;
     var modelDuration = viewModel.duration();
@@ -132,7 +132,7 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
     var modelDurationHeight;
     var comingDurationHeight;
     var isDueDate = viewModel.model ? viewModel.model.isDueDate : false;
-    modelDuration = modelDuration > SCHEDULE_MIN_DURATION ? modelDuration : SCHEDULE_MIN_DURATION;
+    modelDuration = modelDuration > scheduleMinDuration ? modelDuration : scheduleMinDuration;
     duration = modelDuration + goingDuration + comingDuration;
     height = (baseHeight * duration) / baseMS;
 

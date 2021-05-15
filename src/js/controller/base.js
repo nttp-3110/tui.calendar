@@ -67,6 +67,10 @@ function Base(options) {
     this.calendars = [];
 
     this.timeBackground = {};
+
+    if (options.scheduleMinDuration) {
+        datetime._setMilliseconsScheduleMinDuration(options.scheduleMinDuration);
+    }
 }
 
 Base.prototype.setTimeBackground = function(layerBackground, silent) {

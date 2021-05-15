@@ -12,8 +12,6 @@ var array = require('../../common/array');
 var datetime = require('../../common/datetime');
 var TZDate = require('../../common/timezone').Date;
 
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
-
 /**
  * @mixin Base.Week
  */
@@ -29,6 +27,7 @@ var Week = {
      * @returns {array[]} starttime, endtime array (exclude first row's schedules)
      */
     generateTimeArrayInRow: function(matrix) {
+        var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
         var row,
             col,
             schedule,
@@ -48,8 +47,8 @@ var Week = {
                 start = schedule.getStarts().getTime() - datetime.millisecondsFrom('minutes', schedule.valueOf().goingDuration);
                 end = schedule.getEnds().getTime() + datetime.millisecondsFrom('minutes', schedule.valueOf().comingDuration);
 
-                if (Math.abs(end - start) < SCHEDULE_MIN_DURATION) {
-                    end += SCHEDULE_MIN_DURATION;
+                if (Math.abs(end - start) < scheduleMinDuration) {
+                    end += scheduleMinDuration;
                 }
 
                 cursor.push([start, end]);
@@ -106,6 +105,7 @@ var Week = {
      * @param {array[]} matrices - Matrix data.
      */
     getCollides: function(matrices) {
+        var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
         util.forEachArray(matrices, function(matrix) {
             var binaryMap,
                 maxRowLength;
@@ -129,8 +129,8 @@ var Week = {
                     startTime = viewModel.getStarts().getTime();
                     endTime = viewModel.getEnds().getTime();
 
-                    if (Math.abs(endTime - startTime) < SCHEDULE_MIN_DURATION) {
-                        endTime += SCHEDULE_MIN_DURATION;
+                    if (Math.abs(endTime - startTime) < scheduleMinDuration) {
+                        endTime += scheduleMinDuration;
                     }
 
                     startTime -= datetime.millisecondsFrom('minutes', viewModel.valueOf().goingDuration);

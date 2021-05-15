@@ -114,7 +114,12 @@ datetime = {
      * The number of milliseconds 20 minutes for schedule min duration
      * @type {number}
      */
-    MILLISECONDS_SCHEDULE_MIN_DURATION: 15 * 60000,
+
+    millisecondsScheduleMinDuration: 15 * 60000,
+
+    _setMilliseconsScheduleMinDuration: function(minDuration) {
+        this.millisecondsScheduleMinDuration = minDuration * 60000;
+    },
 
     /**
      * convert milliseconds
@@ -254,7 +259,7 @@ datetime = {
      */
     isSameMonth: function(d1, d2) {
         return (d1.getFullYear() === d2.getFullYear() &&
-                d1.getMonth() === d2.getMonth());
+            d1.getMonth() === d2.getMonth());
     },
 
     /**

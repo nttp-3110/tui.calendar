@@ -11,8 +11,6 @@ var datetime = require('../common/datetime');
 var dirty = require('../common/dirty');
 var model = require('../common/model');
 
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
-
 /**
  * Schedule category
  * @readonly
@@ -398,6 +396,7 @@ Schedule.prototype.duration = function() {
  * @returns {boolean} If the other schedule occurs within the same time as the first object.
  */
 Schedule.prototype.collidesWith = function(schedule) {
+    var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
     var ownStarts = this.getStarts(),
         ownEnds = this.getEnds(),
         start = schedule.getStarts(),
@@ -407,12 +406,12 @@ Schedule.prototype.collidesWith = function(schedule) {
         goingDuration = datetime.millisecondsFrom('minutes', schedule.goingDuration),
         comingDuration = datetime.millisecondsFrom('minutes', schedule.comingDuration);
 
-    if (Math.abs(ownEnds - ownStarts) < SCHEDULE_MIN_DURATION) {
-        ownEnds += SCHEDULE_MIN_DURATION;
+    if (Math.abs(ownEnds - ownStarts) < scheduleMinDuration) {
+        ownEnds += scheduleMinDuration;
     }
 
-    if (Math.abs(end - start) < SCHEDULE_MIN_DURATION) {
-        end += SCHEDULE_MIN_DURATION;
+    if (Math.abs(end - start) < scheduleMinDuration) {
+        end += scheduleMinDuration;
     }
 
     ownStarts -= ownGoingDuration;

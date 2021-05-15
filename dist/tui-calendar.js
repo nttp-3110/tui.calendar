@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Thu Feb 25 2021
+ * @version 1.12.11 | Sat May 15 2021
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -3092,7 +3092,12 @@ datetime = {
      * The number of milliseconds 20 minutes for schedule min duration
      * @type {number}
      */
-    MILLISECONDS_SCHEDULE_MIN_DURATION: 15 * 60000,
+
+    millisecondsScheduleMinDuration: 15 * 60000,
+
+    _setMilliseconsScheduleMinDuration: function(minDuration) {
+        this.millisecondsScheduleMinDuration = minDuration * 60000;
+    },
 
     /**
      * convert milliseconds
@@ -3232,7 +3237,7 @@ datetime = {
      */
     isSameMonth: function(d1, d2) {
         return (d1.getFullYear() === d2.getFullYear() &&
-                d1.getMonth() === d2.getMonth());
+            d1.getMonth() === d2.getMonth());
     },
 
     /**
@@ -3603,7 +3608,6 @@ datetime = {
 };
 
 module.exports = datetime;
-
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
@@ -6966,6 +6970,10 @@ function Base(options) {
     this.calendars = [];
 
     this.timeBackground = {};
+
+    if (options.scheduleMinDuration) {
+        datetime._setMilliseconsScheduleMinDuration(options.scheduleMinDuration);
+    }
 }
 
 Base.prototype.setTimeBackground = function(layerBackground, silent) {
@@ -7352,7 +7360,6 @@ Base.prototype.setCalendars = function(calendars) {
 util.CustomEvents.mixin(Base);
 
 module.exports = Base;
-
 
 /***/ }),
 
@@ -7867,8 +7874,6 @@ var array = __webpack_require__(/*! ../../common/array */ "./src/js/common/array
 var datetime = __webpack_require__(/*! ../../common/datetime */ "./src/js/common/datetime.js");
 var TZDate = __webpack_require__(/*! ../../common/timezone */ "./src/js/common/timezone.js").Date;
 
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
-
 /**
  * @mixin Base.Week
  */
@@ -7884,6 +7889,7 @@ var Week = {
      * @returns {array[]} starttime, endtime array (exclude first row's schedules)
      */
     generateTimeArrayInRow: function(matrix) {
+        var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
         var row,
             col,
             schedule,
@@ -7903,8 +7909,8 @@ var Week = {
                 start = schedule.getStarts().getTime() - datetime.millisecondsFrom('minutes', schedule.valueOf().goingDuration);
                 end = schedule.getEnds().getTime() + datetime.millisecondsFrom('minutes', schedule.valueOf().comingDuration);
 
-                if (Math.abs(end - start) < SCHEDULE_MIN_DURATION) {
-                    end += SCHEDULE_MIN_DURATION;
+                if (Math.abs(end - start) < scheduleMinDuration) {
+                    end += scheduleMinDuration;
                 }
 
                 cursor.push([start, end]);
@@ -7961,6 +7967,7 @@ var Week = {
      * @param {array[]} matrices - Matrix data.
      */
     getCollides: function(matrices) {
+        var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
         util.forEachArray(matrices, function(matrix) {
             var binaryMap,
                 maxRowLength;
@@ -7984,8 +7991,8 @@ var Week = {
                     startTime = viewModel.getStarts().getTime();
                     endTime = viewModel.getEnds().getTime();
 
-                    if (Math.abs(endTime - startTime) < SCHEDULE_MIN_DURATION) {
-                        endTime += SCHEDULE_MIN_DURATION;
+                    if (Math.abs(endTime - startTime) < scheduleMinDuration) {
+                        endTime += scheduleMinDuration;
                     }
 
                     startTime -= datetime.millisecondsFrom('minutes', viewModel.valueOf().goingDuration);
@@ -8239,7 +8246,6 @@ var Week = {
 };
 
 module.exports = Week;
-
 
 /***/ }),
 
@@ -17216,8 +17222,6 @@ var Schedule = __webpack_require__(/*! ../../model/schedule */ "./src/js/model/s
 var datetime = __webpack_require__(/*! ../../common/datetime */ "./src/js/common/datetime.js");
 var common = __webpack_require__(/*! ../../common/common */ "./src/js/common/common.js");
 
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
-
 /**
  * Class for Time.Move effect.
  * @constructor
@@ -17347,7 +17351,7 @@ TimeMoveGuide.prototype._refreshGuideElement = function(top, model, viewModel) {
             return;
         }
         self._guideLayer.setPosition(0, top);
-        self._guideLayer.setContent(tmpl(util.extend({model: model}, viewModel)));
+        self._guideLayer.setContent(tmpl(util.extend({ model: model }, viewModel)));
     });
 };
 
@@ -17356,6 +17360,7 @@ TimeMoveGuide.prototype._refreshGuideElement = function(top, model, viewModel) {
  * @param {object} dragStartEventData - dragstart event data
  */
 TimeMoveGuide.prototype._onDragStart = function(dragStartEventData) {
+    var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
     var guideElement = domutil.closest(
         dragStartEventData.target,
         config.classname('.time-date-schedule-block')
@@ -17377,7 +17382,7 @@ TimeMoveGuide.prototype._onDragStart = function(dragStartEventData) {
     );
 
     modelDuration = this._model.duration();
-    modelDuration = modelDuration > SCHEDULE_MIN_DURATION ? modelDuration : SCHEDULE_MIN_DURATION;
+    modelDuration = modelDuration > scheduleMinDuration ? modelDuration : scheduleMinDuration;
     goingDuration = datetime.millisecondsFrom('minutes', this._model.goingDuration);
     comingDuration = datetime.millisecondsFrom('minutes', this._model.comingDuration);
     duration = goingDuration + modelDuration + comingDuration;
@@ -17442,12 +17447,11 @@ TimeMoveGuide.prototype._resetGuideLayer = function() {
     this._guideLayer = new FloatingLayer(null, this._container);
     this._guideLayer.setSize(this._container.getBoundingClientRect().width, this.guideElement.style.height);
     this._guideLayer.setPosition(0, this.guideElement.style.top);
-    this._guideLayer.setContent(tmpl(util.extend({model: this._model}, this._viewModel)));
+    this._guideLayer.setContent(tmpl(util.extend({ model: this._model }, this._viewModel)));
     this._guideLayer.show();
 };
 
 module.exports = TimeMoveGuide;
-
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
@@ -18186,8 +18190,6 @@ var datetime = __webpack_require__(/*! ../common/datetime */ "./src/js/common/da
 var dirty = __webpack_require__(/*! ../common/dirty */ "./src/js/common/dirty.js");
 var model = __webpack_require__(/*! ../common/model */ "./src/js/common/model.js");
 
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
-
 /**
  * Schedule category
  * @readonly
@@ -18573,6 +18575,7 @@ Schedule.prototype.duration = function() {
  * @returns {boolean} If the other schedule occurs within the same time as the first object.
  */
 Schedule.prototype.collidesWith = function(schedule) {
+    var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
     var ownStarts = this.getStarts(),
         ownEnds = this.getEnds(),
         start = schedule.getStarts(),
@@ -18582,12 +18585,12 @@ Schedule.prototype.collidesWith = function(schedule) {
         goingDuration = datetime.millisecondsFrom('minutes', schedule.goingDuration),
         comingDuration = datetime.millisecondsFrom('minutes', schedule.comingDuration);
 
-    if (Math.abs(ownEnds - ownStarts) < SCHEDULE_MIN_DURATION) {
-        ownEnds += SCHEDULE_MIN_DURATION;
+    if (Math.abs(ownEnds - ownStarts) < scheduleMinDuration) {
+        ownEnds += scheduleMinDuration;
     }
 
-    if (Math.abs(end - start) < SCHEDULE_MIN_DURATION) {
-        end += SCHEDULE_MIN_DURATION;
+    if (Math.abs(end - start) < scheduleMinDuration) {
+        end += scheduleMinDuration;
     }
 
     ownStarts -= ownGoingDuration;
@@ -18609,7 +18612,6 @@ dirty.mixin(Schedule.prototype);
 
 module.exports = Schedule;
 
-
 /***/ }),
 
 /***/ "./src/js/model/viewModel/scheduleViewModel.js":
@@ -18628,8 +18630,6 @@ module.exports = Schedule;
 
 var util = __webpack_require__(/*! tui-code-snippet */ "tui-code-snippet");
 var datetime = __webpack_require__(/*! ../../common/datetime */ "./src/js/common/datetime.js");
-
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
 
 /**
  * Schedule ViewModel
@@ -18795,6 +18795,7 @@ ScheduleViewModel.prototype.duration = function() {
  * @returns {boolean} Schedule#collidesWith result.
  */
 ScheduleViewModel.prototype.collidesWith = function(viewModel) {
+    var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
     var ownStarts = this.getStarts(),
         ownEnds = this.getEnds(),
         start = viewModel.getStarts(),
@@ -18804,12 +18805,12 @@ ScheduleViewModel.prototype.collidesWith = function(viewModel) {
         goingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().goingDuration),
         comingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().comingDuration);
 
-    if (Math.abs(ownEnds - ownStarts) < SCHEDULE_MIN_DURATION) {
-        ownEnds += SCHEDULE_MIN_DURATION;
+    if (Math.abs(ownEnds - ownStarts) < scheduleMinDuration) {
+        ownEnds += scheduleMinDuration;
     }
 
-    if (Math.abs(end - start) < SCHEDULE_MIN_DURATION) {
-        end += SCHEDULE_MIN_DURATION;
+    if (Math.abs(end - start) < scheduleMinDuration) {
+        end += scheduleMinDuration;
     }
 
     ownStarts -= ownGoingDuration;
@@ -18827,7 +18828,6 @@ ScheduleViewModel.prototype.collidesWith = function(viewModel) {
 };
 
 module.exports = ScheduleViewModel;
-
 
 /***/ }),
 
@@ -24761,7 +24761,6 @@ var timeTmpl = __webpack_require__(/*! ../template/week/time.hbs */ "./src/js/vi
 var timeBackgroundTmpl = __webpack_require__(/*! ../template/week/timeBackground.hbs */ "./src/js/view/template/week/timeBackground.hbs");
 
 var forEachArr = util.forEachArray;
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
 
 /**
  * @constructor
@@ -24858,6 +24857,7 @@ Time.prototype._getScheduleViewBoundX = function(viewModel, options) {
  * @returns {object} - left and width
  */
 Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
+    var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
     var baseMS = options.baseMS;
     var baseHeight = options.baseHeight;
     var croppedStart = false;
@@ -24868,7 +24868,7 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
     var dragGridY = this._getDragGridY(viewModel.model.start, viewModel.model.end, this.options),
         offsetGridY = dragGridY.nearestGridEndY - dragGridY.nearestGridY,
         hourHeight = baseHeight / (this.options.hourEnd - this.options.hourStart);
-    
+
     // containerHeight : milliseconds in day = x : schedule's milliseconds
     var top = (baseHeight * offsetStart) / baseMS;
     var modelDuration = viewModel.duration();
@@ -24878,7 +24878,7 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
     var modelDurationHeight;
     var comingDurationHeight;
     var isDueDate = viewModel.model ? viewModel.model.isDueDate : false;
-    modelDuration = modelDuration > SCHEDULE_MIN_DURATION ? modelDuration : SCHEDULE_MIN_DURATION;
+    modelDuration = modelDuration > scheduleMinDuration ? modelDuration : scheduleMinDuration;
     duration = modelDuration + goingDuration + comingDuration;
     height = (baseHeight * duration) / baseMS;
 
@@ -25094,7 +25094,6 @@ Time.prototype.applyTheme = function() {
 timeCore.mixin(Time);
 
 module.exports = Time;
-
 
 /***/ }),
 

@@ -16,8 +16,6 @@ var Schedule = require('../../model/schedule');
 var datetime = require('../../common/datetime');
 var common = require('../../common/common');
 
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
-
 /**
  * Class for Time.Move effect.
  * @constructor
@@ -147,7 +145,7 @@ TimeMoveGuide.prototype._refreshGuideElement = function(top, model, viewModel) {
             return;
         }
         self._guideLayer.setPosition(0, top);
-        self._guideLayer.setContent(tmpl(util.extend({model: model}, viewModel)));
+        self._guideLayer.setContent(tmpl(util.extend({ model: model }, viewModel)));
     });
 };
 
@@ -156,6 +154,7 @@ TimeMoveGuide.prototype._refreshGuideElement = function(top, model, viewModel) {
  * @param {object} dragStartEventData - dragstart event data
  */
 TimeMoveGuide.prototype._onDragStart = function(dragStartEventData) {
+    var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
     var guideElement = domutil.closest(
         dragStartEventData.target,
         config.classname('.time-date-schedule-block')
@@ -177,7 +176,7 @@ TimeMoveGuide.prototype._onDragStart = function(dragStartEventData) {
     );
 
     modelDuration = this._model.duration();
-    modelDuration = modelDuration > SCHEDULE_MIN_DURATION ? modelDuration : SCHEDULE_MIN_DURATION;
+    modelDuration = modelDuration > scheduleMinDuration ? modelDuration : scheduleMinDuration;
     goingDuration = datetime.millisecondsFrom('minutes', this._model.goingDuration);
     comingDuration = datetime.millisecondsFrom('minutes', this._model.comingDuration);
     duration = goingDuration + modelDuration + comingDuration;
@@ -242,7 +241,7 @@ TimeMoveGuide.prototype._resetGuideLayer = function() {
     this._guideLayer = new FloatingLayer(null, this._container);
     this._guideLayer.setSize(this._container.getBoundingClientRect().width, this.guideElement.style.height);
     this._guideLayer.setPosition(0, this.guideElement.style.top);
-    this._guideLayer.setContent(tmpl(util.extend({model: this._model}, this._viewModel)));
+    this._guideLayer.setContent(tmpl(util.extend({ model: this._model }, this._viewModel)));
     this._guideLayer.show();
 };
 

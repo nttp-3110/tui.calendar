@@ -7,7 +7,6 @@ var Schedule = require('model/schedule');
 var ScheduleViewModel = require('model/viewModel/scheduleViewModel');
 var datetime = require('common/datetime');
 var TZDate = require('common/timezone').Date;
-var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
 
 describe('Base.Week', function() {
     var stamp = util.stamp;
@@ -34,7 +33,11 @@ describe('Base.Week', function() {
         var supplied;
 
         beforeEach(function() {
-            supplied = [[2, 5], [8, 11], [14, 17]];
+            supplied = [
+                [2, 5],
+                [8, 11],
+                [14, 17]
+            ];
         });
 
         it('return false when supplied empty array', function() {
@@ -42,7 +45,7 @@ describe('Base.Week', function() {
         });
 
         it('calculate collision information properly.', function() {
-            var expected = {collision: 0, emptySpace:1};
+            var expected = { collision: 0, emptySpace: 1 };
             expect(ctrl.hasCollide(supplied, 6, 7)).toBe(false);
         });
     });
@@ -63,6 +66,7 @@ describe('Base.Week', function() {
          *     [[2.start, 2.end], [5.start, 5.end]]
          * ]
          */
+        var scheduleMinDuration = datetime.millisecondsScheduleMinDuration;
 
         var supplied,
             expected;
@@ -70,13 +74,13 @@ describe('Base.Week', function() {
         function TimeMock(start, end) {
             this.getStarts = function() {
                 return {
-                    getTime: function() {return start;}
+                    getTime: function() { return start; }
                 };
             };
 
-            this.getEnds = function () {
+            this.getEnds = function() {
                 return {
-                    getTime: function() {return end;}
+                    getTime: function() { return end; }
                 };
             };
         }
@@ -93,7 +97,10 @@ describe('Base.Week', function() {
             ];
 
             expected = [
-                [[1, 2 + SCHEDULE_MIN_DURATION], [5, 6 + SCHEDULE_MIN_DURATION]]
+                [
+                    [1, 2 + scheduleMinDuration],
+                    [5, 6 + scheduleMinDuration]
+                ]
             ];
         });
 
@@ -110,15 +117,13 @@ describe('Base.Week', function() {
         beforeEach(function() {
             scheduleList = [];
             idList = [];
-            panels = [
-                {
-                    name: 'time',
-                    type: 'timegrid',
-                    autoHeight: true,
-                    handlers: ['click', 'creation', 'move', 'resize'],
-                    show: true
-                }
-            ]
+            panels = [{
+                name: 'time',
+                type: 'timegrid',
+                autoHeight: true,
+                handlers: ['click', 'creation', 'move', 'resize'],
+                show: true
+            }]
 
             util.forEach(mockData, function(data) {
                 base.createSchedule(data);
@@ -126,7 +131,7 @@ describe('Base.Week', function() {
 
             /*
              * It is different from the actual data structure.
-             * Please only refer to the schedule.
+             * Please only refer to the schedule.
              * matrix: {
              * '20150501': [id1],
              * '20150502': [id1, id4],
@@ -139,7 +144,7 @@ describe('Base.Week', function() {
             var start = new Date('2015/04/30'),
                 end = new Date('2015/05/02');
 
-            var result = ctrl.findByDateRange(start, end, panels, [], {hourStart: 0, hourEnd: 24});
+            var result = ctrl.findByDateRange(start, end, panels, [], { hourStart: 0, hourEnd: 24 });
 
             // There are 5 collision blocks on 5/1.
             expect(result.time['20150501'].length).toBe(5);
@@ -150,7 +155,7 @@ describe('Base.Week', function() {
                 end = new Date('2015/05/02');
 
             // Since there is only one event with title J
-            var result = ctrl.findByDateRange(start, end, panels, function(model) {return model.title === 'J';}, {hourStart: 0, hourEnd: 24});
+            var result = ctrl.findByDateRange(start, end, panels, function(model) { return model.title === 'J'; }, { hourStart: 0, hourEnd: 24 });
 
             // One collision block in the timeline group
             expect(result.time['20150501'].length).toBe(1);
@@ -215,4 +220,3 @@ describe('Base.Week', function() {
     });
 
 });
-
