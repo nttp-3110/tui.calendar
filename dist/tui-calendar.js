@@ -1,6 +1,6 @@
 /*!
  * TOAST UI Calendar
- * @version 1.12.11 | Sat May 15 2021
+ * @version 1.12.11 | Sun Jun 27 2021
  * @author NHN FE Development Lab <dl_javascript@nhn.com>
  * @license MIT
  */
@@ -16950,6 +16950,8 @@ TimeMove.prototype._onDragStart = function(dragStartEventData) {
     var target = dragStartEventData.target,
         timeView = this.checkExpectCondition(target),
         blockElement = domutil.closest(target, config.classname('.time-date-schedule-block')),
+        topResizeElement = domutil.closest(target, config.classname('.time-top-resize-handle')),
+        bottomResizeElement = domutil.closest(target, config.classname('.time-bottom-resize-handle')),
         getScheduleDataFunc,
         scheduleData,
         ctrl = this.baseController,
@@ -16963,7 +16965,7 @@ TimeMove.prototype._onDragStart = function(dragStartEventData) {
     targetModelID = domutil.getData(blockElement, 'id');
     targetModel = ctrl.schedules.items[targetModelID];
 
-    if (targetModel.isReadOnly) {
+    if (targetModel.isReadOnly || topResizeElement || bottomResizeElement) {
         return;
     }
 

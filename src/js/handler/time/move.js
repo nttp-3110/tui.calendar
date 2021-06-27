@@ -130,6 +130,8 @@ TimeMove.prototype._onDragStart = function(dragStartEventData) {
     var target = dragStartEventData.target,
         timeView = this.checkExpectCondition(target),
         blockElement = domutil.closest(target, config.classname('.time-date-schedule-block')),
+        topResizeElement = domutil.closest(target, config.classname('.time-top-resize-handle')),
+        bottomResizeElement = domutil.closest(target, config.classname('.time-bottom-resize-handle')),
         getScheduleDataFunc,
         scheduleData,
         ctrl = this.baseController,
@@ -143,7 +145,7 @@ TimeMove.prototype._onDragStart = function(dragStartEventData) {
     targetModelID = domutil.getData(blockElement, 'id');
     targetModel = ctrl.schedules.items[targetModelID];
 
-    if (targetModel.isReadOnly) {
+    if (targetModel.isReadOnly || topResizeElement || bottomResizeElement) {
         return;
     }
 
